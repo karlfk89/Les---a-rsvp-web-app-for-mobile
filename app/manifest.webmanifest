@@ -1,8 +1,8 @@
 {
-  "name": "Les – RSVP-leser",
+  "name": "Les – RSVP reader",
   "short_name": "Les",
-  "description": "Les bøker ett ord om gangen (RSVP), også uten nett.",
-  "lang": "nb",
+  "description": "Read books one word at a time (RSVP), also offline.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

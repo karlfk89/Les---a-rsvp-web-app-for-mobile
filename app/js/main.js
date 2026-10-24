@@ -1,5 +1,6 @@
 // App entry: hash routing between the library (#/) and the reader (#/bok/<id>).
 
+import { getLocale, setLocale, t } from './i18n.js';
 import { applyAppearance, loadSettings } from './settings.js';
 import { clearToasts } from './ui/dom.js';
 import { openLibrary } from './ui/library.js';
@@ -22,7 +23,11 @@ async function route() {
   else cleanup = next || (() => {});
 }
 
-applyAppearance(loadSettings());
+const settings = loadSettings();
+setLocale(settings.uiLanguage);
+document.documentElement.lang = getLocale();
+document.title = t('app.title');
+applyAppearance(settings);
 window.addEventListener('hashchange', route);
 route();
 registerServiceWorker();

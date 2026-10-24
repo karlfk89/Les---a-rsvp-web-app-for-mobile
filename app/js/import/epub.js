@@ -9,7 +9,13 @@ import { decodeBytes } from './decode.js';
 import { extractBlocks, localName } from './html.js';
 import { titleFromFilename } from './structure.js';
 
-export class ImportError extends Error {}
+// `code` names the problem; the interface shows it as importError.<code>.
+export class ImportError extends Error {
+  constructor(code) {
+    super(code);
+    this.code = code;
+  }
+}
 
 const FONT_OBFUSCATION = new Set(['http://www.idpf.org/2008/embedding', 'http://ns.adobe.com/pdf/enc#RC']);
 const NON_CONTENT_TITLES = new Set(['cover', 'omslag', 'forside', 'title page', 'titlepage', 'tittelside', 'tittel',
@@ -68,7 +74,7 @@ export async function parseEpub(bytes, { filename = '', DOMParserImpl = globalTh
   try {
     files = unzipSync(bytes);
   } catch {
-    throw new ImportError('Filen er ikke en gyldig EPUB (kunne ikke pakkes ut).');
+    throw new ImportError('invalidEpub');
   }
   const lowerCaseIndex = new Map(Object.keys(files).map((name) => [name.toLowerCase(), name]));
   const file = (path) => files[path] || files[lowerCaseIndex.get(path.toLowerCase())] || null;
@@ -84,10 +90,10 @@ export async function parseEpub(bytes, { filename = '', DOMParserImpl = globalTh
   rejectDrm(file, parseXml);
 
   const container = file('META-INF/container.xml');
-  if (!container) throw new ImportError('EPUB-en mangler META-INF/container.xml.');
+  if (!container) throw new ImportError('noContainer');
   const opfPath = first(parseXml(container), 'rootfile')?.getAttribute('full-path');
   const opfData = opfPath && file(opfPath);
-  if (!opfData) throw new ImportError('Fant ikke pakkefilen (OPF) i EPUB-en.');
+  if (!opfData) throw new ImportError('noPackage');
   const opf = parseXml(opfData);
   const opfDir = dirOf(opfPath);
 
@@ -168,13 +174,13 @@ export async function parseEpub(bytes, { filename = '', DOMParserImpl = globalTh
   }
 
   const nonEmpty = chapters.filter((chapter) => chapter.paragraphs.length > 0);
-  if (nonEmpty.length === 0) throw new ImportError('Fant ingen lesbar tekst i EPUB-en.');
+  if (nonEmpty.length === 0) throw new ImportError('noText');
   return { title, author, declaredLang, chapters: nonEmpty };
 }
 
 function rejectDrm(file, parseXml) {
   if (file('META-INF/rights.xml') || file('META-INF/sinf.xml')) {
-    throw new ImportError('Boka er DRM-beskyttet og kan ikke åpnes.');
+    throw new ImportError('drm');
   }
   const encryption = file('META-INF/encryption.xml');
   if (!encryption) return;
@@ -182,7 +188,7 @@ function rejectDrm(file, parseXml) {
     const algorithm = first(data, 'EncryptionMethod')?.getAttribute('Algorithm') || '';
     const uri = first(data, 'CipherReference')?.getAttribute('URI') || '';
     if (!FONT_OBFUSCATION.has(algorithm) || !/\.(?:ttf|otf|woff2?)$/i.test(uri)) {
-      throw new ImportError('Boka er DRM-beskyttet og kan ikke åpnes.');
+      throw new ImportError('drm');
     }
   }
 }

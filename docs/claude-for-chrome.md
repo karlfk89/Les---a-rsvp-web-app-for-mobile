@@ -156,7 +156,7 @@ systemctl is-active caddy tailscaled
 
 Begge linjene skal være `active`. Er denne PC-en med i Tailscale, åpne adressen fra steg 8 i en ny
 fane. Første gang kan det ta opptil et halvt minutt mens sertifikatet hentes. Siden skal vise
-**Bibliotek**. Er PC-en ikke med i Tailscale, hopp over dette; brukeren tester på iPhonen.
+**Library** (appen er på engelsk til å begynne med). Er PC-en ikke med i Tailscale, hopp over dette; brukeren tester på iPhonen.
 
 ## Steg 10: Rapporter til brukeren
 

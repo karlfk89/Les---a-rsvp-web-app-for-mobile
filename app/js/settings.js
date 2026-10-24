@@ -1,11 +1,13 @@
 // Global reader settings, kept in localStorage so the theme can be applied
 // before the first paint.
 
+import { DEFAULT_UI_LANGUAGE, UI_LANGUAGES } from './i18n.js';
 import { DEFAULT_PACING } from './reader/pacing.js';
 
 const KEY = 'rsvp-settings';
 
 export const DEFAULT_SETTINGS = {
+  uiLanguage: DEFAULT_UI_LANGUAGE,
   wpm: 250,
   pacingModel: 2,
   readingMode: 'tap',
@@ -45,32 +47,33 @@ export function bookSpeed(book) {
   return book.pacingModel === PACING_MODEL ? book.wpm : convertLegacyWpm(book.wpm);
 }
 
+// The labels of fonts, focus colours, themes and reading modes are in the
+// locale files (font.serif, theme.dark and so on).
 export const FONTS = {
-  serif: { label: 'Serif', css: 'ui-serif, "New York", Georgia, "Times New Roman", serif' },
-  sans: { label: 'Sans', css: '-apple-system, system-ui, "SF Pro Text", "Helvetica Neue", Arial, sans-serif' },
-  rounded: { label: 'Rund', css: 'ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif' },
-  mono: { label: 'Mono', css: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace' },
+  serif: 'ui-serif, "New York", Georgia, "Times New Roman", serif',
+  sans: '-apple-system, system-ui, "SF Pro Text", "Helvetica Neue", Arial, sans-serif',
+  rounded: 'ui-rounded, "SF Pro Rounded", -apple-system, system-ui, sans-serif',
+  mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace',
 };
 
 export const FOCUS_COLORS = {
-  accent: { label: 'Rød', css: 'var(--accent)' },
-  orange: { label: 'Oransje', css: '#ff9f0a' },
-  blue: { label: 'Blå', css: '#0a84ff' },
-  green: { label: 'Grønn', css: '#30d158' },
-  none: { label: 'Av', css: 'var(--text)' },
+  accent: 'var(--accent)',
+  orange: '#ff9f0a',
+  blue: '#0a84ff',
+  green: '#30d158',
+  none: 'var(--text)',
 };
 
-export const THEMES = { dark: 'Mørk', black: 'Svart', light: 'Lys', sepia: 'Sepia' };
+export const THEMES = ['dark', 'black', 'light', 'sepia'];
 
 // tap: a tap starts and stops reading. hold: reading runs while a finger is held down.
-export const READING_MODES = { tap: 'Trykk', hold: 'Hold inne' };
+export const READING_MODES = ['tap', 'hold'];
 
 const listeners = new Set();
 let current = null;
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const isObject = (value) => Boolean(value) && typeof value === 'object';
-const hasKey = (object, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(object, key);
 
 // Keeps only known settings with valid values, so an old or edited backup file
 // cannot put the reader into a broken state.
@@ -79,9 +82,10 @@ export function normalizeSettings(raw) {
   const pacingSource = isObject(source.pacing) ? source.pacing : {};
   const number = (value, fallback, min, max) => (Number.isFinite(value) ? clamp(value, min, max) : fallback);
   const flag = (key) => (typeof source[key] === 'boolean' ? source[key] : DEFAULT_SETTINGS[key]);
-  const choice = (key, options) => (hasKey(options, source[key]) ? source[key] : DEFAULT_SETTINGS[key]);
+  const choice = (key, options) => (options.includes(source[key]) ? source[key] : DEFAULT_SETTINGS[key]);
   const wpm = number(source.wpm, DEFAULT_SETTINGS.wpm, WPM_MIN, WPM_MAX);
   return {
+    uiLanguage: choice('uiLanguage', Object.keys(UI_LANGUAGES)),
     wpm: source.pacingModel === PACING_MODEL || !Number.isFinite(source.wpm) ? wpm : convertLegacyWpm(wpm),
     pacingModel: PACING_MODEL,
     readingMode: choice('readingMode', READING_MODES),
@@ -93,10 +97,10 @@ export function normalizeSettings(raw) {
     splitLength: number(source.splitLength, DEFAULT_SETTINGS.splitLength, SPLIT_MIN, SPLIT_MAX),
     showContext: flag('showContext'),
     guides: flag('guides'),
-    focusColor: choice('focusColor', FOCUS_COLORS),
+    focusColor: choice('focusColor', Object.keys(FOCUS_COLORS)),
     anchor: number(source.anchor, DEFAULT_SETTINGS.anchor, 25, 50),
     theme: choice('theme', THEMES),
-    font: choice('font', FONTS),
+    font: choice('font', Object.keys(FONTS)),
     fontSize: number(source.fontSize, DEFAULT_SETTINGS.fontSize, 24, 96),
   };
 }
@@ -133,8 +137,8 @@ export function onSettingsChange(listener) {
 export function applyAppearance(settings) {
   const root = document.documentElement;
   root.dataset.theme = settings.theme;
-  root.style.setProperty('--font-reader', (FONTS[settings.font] || FONTS.serif).css);
-  root.style.setProperty('--focus', (FOCUS_COLORS[settings.focusColor] || FOCUS_COLORS.accent).css);
+  root.style.setProperty('--font-reader', FONTS[settings.font] || FONTS.serif);
+  root.style.setProperty('--focus', FOCUS_COLORS[settings.focusColor] || FOCUS_COLORS.accent);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = getComputedStyle(root).getPropertyValue('--bg').trim() || '#121214';
 }

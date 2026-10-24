@@ -118,8 +118,10 @@ oppdateringer selv (se «Oppdatere»).
 1. Installer **Tailscale** fra App Store, logg inn med samme konto og slå den på.
 2. Åpne adressen fra steg 5 i **Safari**.
 3. Trykk **Del** → **Legg til på Hjem-skjerm** → **Legg til**.
-4. Åpne **Les** fra Hjem-skjermen. Vent til biblioteket viser **✓ Klar for bruk uten nett**.
-5. Legg til bøker med **Legg til bok**. Last dem gjerne ned til Filer-appen først.
+4. Åpne **Les** fra Hjem-skjermen. Appen er på engelsk til å begynne med; velg norsk under
+   **Settings** (glidebryter-ikonet) → **Language** → **Norsk**. Vent til biblioteket viser
+   **✓ Klar for bruk uten nett** (**✓ Ready for offline use** på engelsk).
+5. Legg til bøker med **Legg til bok** (**Add book**). Last dem gjerne ned til Filer-appen først.
 6. Test: slå på **flymodus**, lukk appen helt og åpne den igjen fra Hjem-skjermen.
 
 Bruk alltid appen fra Hjem-skjermen, ikke fra en fane i Safari. Hjem-skjerm-appen har egen lagring

@@ -132,8 +132,8 @@ export async function parsePdf(bytes, { filename = '', pdfjs, onProgress } = {})
   try {
     pdf = await loadingTask.promise;
   } catch (error) {
-    if (error?.name === 'PasswordException') throw new ImportError('PDF-en er passordbeskyttet.');
-    throw new ImportError('Kunne ikke lese PDF-filen.');
+    if (error?.name === 'PasswordException') throw new ImportError('pdfPassword');
+    throw new ImportError('pdfUnreadable');
   }
 
   const pages = [];
@@ -169,7 +169,7 @@ export async function parsePdf(bytes, { filename = '', pdfjs, onProgress } = {})
     });
   });
   if (paragraphs.length === 0) {
-    throw new ImportError('PDF-en har ingen tekst som kan leses (er den skannet?).');
+    throw new ImportError('pdfNoText');
   }
 
   const info = (await pdf.getMetadata().catch(() => null))?.info || {};

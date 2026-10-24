@@ -4,7 +4,7 @@
 // by `npm run precache`.
 
 // <precache>
-const VERSION = 'de296e0426';
+const VERSION = '861476d7db';
 const FILES = [
   './',
   './css/app.css',
@@ -12,6 +12,7 @@ const FILES = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
+  './js/i18n.js',
   './js/import/decode.js',
   './js/import/epub.js',
   './js/import/html.js',
@@ -19,6 +20,8 @@ const FILES = [
   './js/import/pdf.js',
   './js/import/structure.js',
   './js/import/txt.js',
+  './js/locales/en.js',
+  './js/locales/nb.js',
   './js/main.js',
   './js/reader/book-index.js',
   './js/reader/engine.js',

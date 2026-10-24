@@ -1,5 +1,6 @@
 // Library: import books, list them with progress, open, change language or delete.
 
+import { intlLocale, t } from '../i18n.js';
 import { ACCEPTED_FILES, ImportError, bookId, parseBook } from '../import/index.js';
 import { bookSpeed, loadSettings } from '../settings.js';
 import { LANGUAGES } from '../text/language.js';
@@ -12,27 +13,22 @@ import {
 } from './offline.js';
 import { openSettings } from './settings-view.js';
 
-const FREE_BOOK_SOURCES = [
-  ['Bokselskap.no', 'https://www.bokselskap.no', 'norske klassikere som EPUB'],
-  ['Project Gutenberg', 'https://www.gutenberg.org/browse/languages/no', 'norske og engelske bøker'],
-  ['Project Runeberg', 'https://runeberg.org', 'nordisk litteratur'],
-  ['Standard Ebooks', 'https://standardebooks.org', 'engelske klassikere'],
-];
-
 async function importFiles(files, refresh) {
   requestPersistentStorage();
   for (const file of files) {
-    const note = toast(`Importerer «${file.name}» …`, { duration: 0 });
+    const note = toast(t('library.importing', { name: file.name }), { duration: 0 });
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const id = await bookId(bytes);
       const existing = await db.getBook(id);
       if (existing) {
-        note.update(`«${existing.title}» finnes allerede i biblioteket.`, { duration: 3500 });
+        note.update(t('library.exists', { title: existing.title }), { duration: 3500 });
         continue;
       }
       const book = await parseBook(bytes, file.name, {
-        onProgress: (fraction) => note.update(`Leser «${file.name}» … ${Math.round(fraction * 100)} %`),
+        onProgress: (fraction) => note.update(t('library.reading', {
+          name: file.name, percent: t('percent', { value: Math.round(fraction * 100) }),
+        })),
       });
       const { chapters, ...info } = book;
       const record = {
@@ -48,13 +44,15 @@ async function importFiles(files, refresh) {
       await db.addBook(record, chapters);
       const resumed = await applyPendingProgress(record);
       note.update(resumed
-        ? `La til «${book.title}» og fortsetter på ${formatPercent(resumed.position / Math.max(1, book.wordCount - 1))}.`
-        : `La til «${book.title}» (${LANGUAGES[book.lang].name.toLowerCase()}).`, { duration: 3500 });
+        ? t('library.addedResumed', {
+          title: book.title, percent: formatPercent(resumed.position / Math.max(1, book.wordCount - 1)),
+        })
+        : t('library.added', { title: book.title, language: t(`lang.${book.lang}`) }), { duration: 3500 });
       await refresh();
     } catch (error) {
       console.error(error);
-      const message = error instanceof ImportError ? error.message : 'Ukjent feil under import.';
-      note.update(`Kunne ikke importere «${file.name}»: ${message}`, { error: true, duration: 7000 });
+      const message = error instanceof ImportError ? t(`importError.${error.code}`) : t('library.unknownError');
+      note.update(t('library.importFailed', { name: file.name, message }), { error: true, duration: 7000 });
     }
   }
 }
@@ -63,7 +61,7 @@ function bookActions(book, refresh) {
   const ownSpeed = bookSpeed(book);
   const speed = ownSpeed !== null
     ? [
-      h('p', { class: 'setting-help' }, `Egen hastighet: ${ownSpeed} ord/min.`),
+      h('p', { class: 'setting-help' }, t('book.ownSpeed', { wpm: ownSpeed })),
       h('button', {
         class: 'btn',
         type: 'button',
@@ -72,10 +70,9 @@ function bookActions(book, refresh) {
           close();
           refresh();
         },
-      }, `Bruk standardhastighet (${loadSettings().wpm} ord/min)`),
+      }, t('book.useDefaultSpeed', { wpm: loadSettings().wpm })),
     ]
-    : h('p', { class: 'setting-help' },
-      `Bruker standardhastigheten (${loadSettings().wpm} ord/min). Endre med − og + mens du leser.`);
+    : h('p', { class: 'setting-help' }, t('book.followsDefaultSpeed', { wpm: loadSettings().wpm }));
   const languageButtons = Object.values(LANGUAGES).map((lang) => h('button', {
     class: `btn${book.lang === lang.code ? ' selected' : ''}`,
     type: 'button',
@@ -84,10 +81,10 @@ function bookActions(book, refresh) {
       close();
       refresh();
     },
-  }, `Språk: ${lang.name}`));
+  }, t('book.language', { language: t(`lang.${lang.code}`) })));
   const body = h('div', { class: 'action-list' },
     speed,
-    h('p', { class: 'setting-help' }, 'Språket styrer forkortelser og stavelser i tempoberegningen.'),
+    h('p', { class: 'setting-help' }, t('book.languageHelp')),
     languageButtons,
     h('button', {
       class: 'btn',
@@ -97,33 +94,32 @@ function bookActions(book, refresh) {
         close();
         refresh();
       },
-    }, 'Start fra begynnelsen'),
+    }, t('book.restart')),
     h('button', {
       class: 'btn danger',
       type: 'button',
       onclick: async () => {
-        if (!confirm(`Slette «${book.title}» fra denne enheten?`)) return;
+        if (!confirm(t('book.confirmDelete', { title: book.title }))) return;
         await db.deleteBook(book.id);
         close();
         refresh();
       },
-    }, 'Slett boka'));
+    }, t('book.delete')));
   const close = openSheet(book.title, body);
 }
 
 function bookItem(book, refresh) {
   const progress = book.wordCount > 1 ? book.position / (book.wordCount - 1) : 0;
+  const left = book.remainingMs ? ` · ${t('book.left', { duration: formatDuration(book.remainingMs) })}` : '';
   const status = book.finished
-    ? 'Ferdig lest'
-    : book.position > 0
-      ? `${formatPercent(progress)}${book.remainingMs ? ` · ${formatDuration(book.remainingMs)} igjen` : ''}`
-      : `${book.chapterCount} kapitler`;
+    ? t('book.finished')
+    : book.position > 0 ? `${formatPercent(progress)}${left}` : t('book.chapters', { count: book.chapterCount });
   return h('li', { class: 'book' },
     h('button', { class: 'book-open', type: 'button', onclick: () => { location.hash = `#/bok/${book.id}`; } },
       h('span', { class: 'book-title' }, book.title),
       book.author ? h('span', { class: 'book-author' }, book.author) : null,
       h('span', { class: 'book-meta' },
-        h('span', { class: 'badge' }, LANGUAGES[book.lang]?.short || '?'),
+        h('span', { class: 'badge' }, LANGUAGES[book.lang] ? t(`lang.${book.lang}.short`) : '?'),
         h('span', { class: 'badge' }, book.format.toUpperCase()),
         h('span', null, status)),
       h('span', { class: 'progress', 'aria-hidden': 'true' },
@@ -131,7 +127,7 @@ function bookItem(book, refresh) {
     h('button', {
       class: 'icon-btn book-more',
       type: 'button',
-      'aria-label': `Valg for ${book.title}`,
+      'aria-label': t('book.options', { title: book.title }),
       onclick: () => bookActions(book, refresh),
     }, icon('more')));
 }
@@ -140,21 +136,20 @@ function bookItem(book, refresh) {
 function pendingSection(pending, refresh) {
   if (pending.length === 0) return null;
   return h('section', { class: 'pending-books' },
-    h('h2', { class: 'section-title' }, 'Venter på bokfilen'),
-    h('p', { class: 'setting-help' },
-      'Fremdriften for disse bøkene er hentet fra en sikkerhetskopi. Legg til den samme filen igjen, ' +
-      'så fortsetter du der du var.'),
+    h('h2', { class: 'section-title' }, t('pending.title')),
+    h('p', { class: 'setting-help' }, t('pending.help')),
     h('ul', { class: 'book-list' }, pending.map((book) => h('li', { class: 'book pending' },
       h('div', { class: 'book-open' },
         h('span', { class: 'book-title' }, book.title),
         book.author ? h('span', { class: 'book-author' }, book.author) : null,
         h('span', { class: 'book-meta' },
-          h('span', null, `${formatPercent(book.position / Math.max(1, book.wordCount - 1))} lest`),
+          h('span', null,
+            t('pending.read', { percent: formatPercent(book.position / Math.max(1, book.wordCount - 1)) })),
           book.fileName ? h('span', null, book.fileName) : null)),
       h('button', {
         class: 'icon-btn book-more',
         type: 'button',
-        'aria-label': `Glem fremdriften for ${book.title}`,
+        'aria-label': t('pending.forget', { title: book.title }),
         onclick: async () => {
           await db.deletePending(book.id);
           refresh();
@@ -164,9 +159,9 @@ function pendingSection(pending, refresh) {
 
 function emptyState() {
   return h('div', { class: 'empty' },
-    h('h2', null, 'Ingen bøker ennå'),
-    h('p', null, 'Last ned en gratis bok (EPUB, PDF eller tekstfil) til Filer-appen, og trykk «Legg til bok».'),
-    h('ul', null, FREE_BOOK_SOURCES.map(([name, url, what]) =>
+    h('h2', null, t('library.emptyTitle')),
+    h('p', null, t('library.emptyHelp')),
+    h('ul', null, t('library.sources').map(([name, url, what]) =>
       h('li', null, h('a', { href: url, target: '_blank', rel: 'noopener' }, name), ` – ${what}`))));
 }
 
@@ -188,9 +183,9 @@ export function openLibrary(root) {
       h('div', { class: status.startsWith('✓') ? 'status-ok' : '' }, status),
       storage ? h('div', null, storage) : null,
       books.length ? h('div', null, lastBackup
-        ? `Sist sikkerhetskopiert ${lastBackup.toLocaleDateString('nb-NO')}.`
-        : 'Ingen sikkerhetskopi ennå (Innstillinger → Sikkerhetskopi).') : null,
-      isStandalone() ? null : h('div', null, 'Tips: Del → «Legg til på Hjem-skjerm» for å bruke appen uten nett.'));
+        ? t('library.lastBackup', { date: lastBackup.toLocaleDateString(intlLocale()) })
+        : t('library.noBackup')) : null,
+      isStandalone() ? null : h('div', null, t('library.installTip')));
   };
 
   fileInput.addEventListener('change', async () => {
@@ -201,17 +196,17 @@ export function openLibrary(root) {
 
   const view = h('div', { class: 'library' },
     h('header', { class: 'library-header' },
-      h('h1', null, 'Bibliotek'),
+      h('h1', null, t('library.title')),
       h('div', { class: 'library-actions' },
         h('button', {
           class: 'icon-btn',
           type: 'button',
-          'aria-label': 'Innstillinger',
+          'aria-label': t('common.settings'),
           onclick: () => openSettings({ canRestore: true }),
         }, icon('sliders')))),
     banners,
     h('button', { class: 'btn primary import-btn', type: 'button', onclick: () => fileInput.click() },
-      icon('plus'), 'Legg til bok'),
+      icon('plus'), t('library.addBook')),
     fileInput,
     list,
     footer);

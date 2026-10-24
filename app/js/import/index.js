@@ -51,19 +51,19 @@ export async function parseBook(bytes, filename, { DOMParserImpl = globalThis.DO
   } else if (['html', 'htm', 'xhtml'].includes(ext)) {
     parsed = parseHtml(bytes, filename, DOMParserImpl);
   } else if (['mobi', 'azw', 'azw3', 'kfx'].includes(ext)) {
-    throw new ImportError('Kindle-formater støttes ikke. Last ned boka som EPUB i stedet.');
+    throw new ImportError('kindle');
   } else if (['txt', 'text', 'md', 'markdown'].includes(ext) || !bytes.subarray(0, 4096).includes(0)) {
     parsed = parseText(decodeBytes(bytes), { filename, markdown: ext === 'md' || ext === 'markdown' });
   } else {
-    throw new ImportError('Ukjent filformat. Bruk EPUB, PDF eller tekstfil.');
+    throw new ImportError('unknownFormat');
   }
-  if (!parsed || parsed.chapters.length === 0) throw new ImportError('Fant ingen lesbar tekst i filen.');
+  if (!parsed || parsed.chapters.length === 0) throw new ImportError('noText');
 
   const sample = parsed.chapters.flatMap((c) => c.paragraphs).slice(0, 400).join(' ');
   const lang = parsed.declaredLang || detectLanguage(sample, DEFAULT_LANGUAGE);
   const wordCount = parsed.chapters.reduce((sum, chapter) =>
     sum + chapter.paragraphs.reduce((n, paragraph) => n + tokenizeParagraph(paragraph).length, 0), 0);
-  if (wordCount === 0) throw new ImportError('Fant ingen lesbar tekst i filen.');
+  if (wordCount === 0) throw new ImportError('noText');
 
   return {
     title: parsed.title,

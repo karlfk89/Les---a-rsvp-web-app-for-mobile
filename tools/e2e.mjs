@@ -1,6 +1,7 @@
-// End-to-end check in Chromium with an iPhone-sized viewport: import EPUB,
-// TXT and PDF, read, pause, jump chapters, change settings, then go offline
-// and make sure the app, the library and PDF import still work.
+// End-to-end check in Chromium with an iPhone-sized viewport: start in
+// English, switch to Norwegian, import EPUB, TXT and PDF, read, pause, jump
+// chapters, change settings, then go offline and make sure the app, the
+// library, PDF import and switching back to English still work.
 // Run: npm run e2e [-- screenshot-dir]
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -48,11 +49,21 @@ const step = async (name, action) => {
 const shot = (name) => page.screenshot({ path: join(shots, `${name}.png`) });
 
 try {
-  await step('library opens', async () => {
+  await step('library opens in English', async () => {
     await page.goto(`http://localhost:${PORT}/`);
-    await page.getByRole('heading', { name: 'Bibliotek' }).waitFor();
+    await page.getByRole('heading', { name: 'Library' }).waitFor();
     await page.evaluate(() => navigator.serviceWorker.ready);
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'en');
+    await page.getByText('No books yet').waitFor();
     await shot('01-empty-library');
+  });
+
+  await step('switches the interface to Norwegian', async () => {
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('group', { name: 'App language' }).getByRole('button', { name: 'Norsk' }).click();
+    await page.getByRole('heading', { name: 'Bibliotek' }).waitFor();
+    assert.equal(await page.evaluate(() => document.documentElement.lang), 'nb');
+    assert.equal(await page.title(), 'Les – RSVP-leser');
   });
 
   await step('imports EPUB, TXT and PDF', async () => {
@@ -357,6 +368,31 @@ try {
       assert.ok(text.includes(notice), notice);
     }
     await page.getByRole('button', { name: 'Ferdig' }).click();
+  });
+
+  await step('switches back to English, also offline', async () => {
+    await page.getByRole('button', { name: 'Innstillinger' }).click();
+    await page.getByRole('group', { name: 'Språk i appen' }).getByRole('button', { name: 'English' }).click();
+    await page.getByRole('heading', { name: 'Library' }).waitFor();
+    await page.locator('.book').nth(2).waitFor();
+    const badges = await page.locator('.book .badge').allTextContents();
+    assert.ok(badges.includes('NB') && badges.includes('NN'), badges.join());
+    await page.locator('.book', { hasText: 'Testforfatter' }).getByRole('button', { name: /Options for/ }).click();
+    await page.getByRole('button', { name: 'Language: Norwegian Bokmål' }).waitFor();
+    await page.getByRole('button', { name: 'Done' }).click();
+    await page.locator('.book-open', { hasText: 'Testforfatter' }).click();
+    await page.getByRole('button', { name: 'Back to library' }).waitFor();
+    assert.match(await page.locator('.speed output').textContent(), /^\d+ words\/min$/);
+    assert.match(await page.locator('.position-row').textContent(), /left in chapter/);
+    await shot('16-reader-english');
+    const keyLike = /\b(?:library|reader|book|settings|backup|common|pending|offline|update|licences)\.[a-z]+[A-Z]?\w*/;
+    assert.ok(!keyLike.test(await page.locator('body').textContent()), 'no untranslated keys');
+    await page.getByRole('button', { name: 'Settings' }).click();
+    await page.getByRole('heading', { name: 'Appearance' }).waitFor();
+    assert.ok(!keyLike.test(await page.locator('body').textContent()), 'no untranslated keys in settings');
+    await page.waitForTimeout(300);
+    await shot('17-settings-english');
+    await page.getByRole('button', { name: 'Done' }).click();
   });
 
   assert.deepEqual(errors, [], 'console errors');

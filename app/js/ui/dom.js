@@ -1,5 +1,7 @@
 // Small DOM helpers: element builder, icons, bottom sheets and toasts.
 
+import { t } from '../i18n.js';
+
 export function h(tag, props, ...children) {
   const el = document.createElement(tag);
   for (const [key, value] of Object.entries(props || {})) {
@@ -57,7 +59,7 @@ export function openSheet(title, body, { onClose } = {}) {
   const sheet = h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
     h('div', { class: 'sheet-header' },
       h('h2', null, title),
-      h('button', { class: 'btn ghost', onclick: close }, 'Ferdig')),
+      h('button', { class: 'btn ghost', onclick: close }, t('common.done'))),
     h('div', { class: 'sheet-body' }, body));
   const backdrop = h('div', {
     class: 'sheet-backdrop',

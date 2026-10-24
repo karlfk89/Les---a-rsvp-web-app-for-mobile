@@ -1,0 +1,21 @@
+# Start from the repository root: docker compose -f deploy/docker-compose.yml up -d --build
+# Set SITE_ADDRESS (and TLS_DIRECTIVE) in deploy/.env; see docs/SELVHOSTING.md.
+services:
+  les:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      TLS_DIRECTIVE: ${TLS_DIRECTIVE:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

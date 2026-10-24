@@ -70,6 +70,12 @@ export function openSheet(title, body, { onClose } = {}) {
   return close;
 }
 
+// replaceChildren that skips null, undefined and false like h() does; plain
+// replaceChildren would show them as the text «null».
+export function setChildren(el, ...children) {
+  el.replaceChildren(...children.flat().filter((child) => child !== null && child !== undefined && child !== false));
+}
+
 export function clearToasts() {
   document.getElementById('toasts')?.replaceChildren();
 }

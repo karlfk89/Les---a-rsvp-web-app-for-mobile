@@ -11,7 +11,8 @@ Proxmox. Tempo- og fokusreglene bygger på [RSVP Nano](https://github.com/ionutd
   «Kapittel 3» og «FØRSTE STYKKE». Bøker med DRM avvises med en tydelig melding.
 - **RSVP-visning** med fast fokusbokstav, hjelpelinjer og svake ord før og etter.
 - **Tempo** som tilpasser seg ordet: ekstra tid for lange sammensatte ord, tall og tegnsetting,
-  og pause ved setnings- og avsnittsslutt.
+  og pause ved setnings- og avsnittsslutt. Hver bok husker sin egen hastighet når du endrer den
+  mens du leser; ellers brukes standardhastigheten.
 - **Norsk**: æøå, «sitater», replikkstrek, tallgrupper som «1 500 000», desimalkomma og norske
   forkortelser (f.eks., bl.a., t.d.). Språket finnes automatisk per bok og kan endres.
 - **Navigasjon**: kapitteloversikt og kapittelhopp, tilbake til starten av setningen, ord for ord,

@@ -4,7 +4,7 @@
 // by `npm run precache`.
 
 // <precache>
-const VERSION = 'd5b4b56ccb';
+const VERSION = '4a0598647f';
 const FILES = [
   './',
   './css/app.css',

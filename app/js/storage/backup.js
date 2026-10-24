@@ -5,7 +5,7 @@
 
 import { LANGUAGES } from '../text/language.js';
 import { VERSION } from '../version.js';
-import { loadSettings, normalizeSettings, updateSettings } from '../settings.js';
+import { WPM_MAX, WPM_MIN, loadSettings, normalizeSettings, updateSettings } from '../settings.js';
 import * as db from './db.js';
 
 export const BACKUP_APP = 'les-rsvp';
@@ -27,6 +27,7 @@ const RECORD_FIELDS = {
   finished: 'boolean',
   addedAt: 'number',
   openedAt: 'number',
+  wpm: 'number',
 };
 
 // Only known fields with the right type; null when the entry is unusable.
@@ -40,6 +41,7 @@ function cleanRecord(raw) {
   record.author = record.author || '';
   record.position = Math.min(Math.max(0, Math.round(record.position || 0)), record.wordCount - 1);
   if (!LANGUAGES[record.lang]) delete record.lang;
+  if (!(record.wpm >= WPM_MIN && record.wpm <= WPM_MAX)) delete record.wpm;
   return record;
 }
 
@@ -116,6 +118,7 @@ export function progressFor(saved, book) {
     remainingMs: null,
   };
   if (saved.lang) changes.lang = saved.lang;
+  if (saved.wpm) changes.wpm = saved.wpm;
   return changes;
 }
 

@@ -90,6 +90,15 @@ test('books missing here are added with their text, or kept as pending progress'
   assert.deepEqual(plan.pending.map((record) => record.id), ['c3']);
 });
 
+test('a book\'s own speed is backed up and restored, invalid speeds are dropped', () => {
+  const backup = roundTrip({ books: [book({ wpm: 450, openedAt: 9 }), book({ id: 'b2', title: 'Jenny', wpm: 5 })] });
+  assert.equal(backup.books[0].record.wpm, 450);
+  assert.ok(!('wpm' in backup.books[1].record));
+  const plan = planRestore(backup, [book({ openedAt: 1 })]);
+  assert.equal(plan.updates[0].changes.wpm, 450);
+  assert.ok(!('wpm' in progressFor(book({ title: 'Jenny' }), book({ id: 'new', title: 'Jenny' }))));
+});
+
 test('a new download of the same book matches by title and keeps the fraction read', () => {
   const saved = book({ position: 500, openedAt: 9 });
   const newDownload = book({ id: 'new', wordCount: 2001 });

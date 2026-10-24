@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="nb" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Les">
+  <meta name="theme-color" content="#121214">
+  <meta name="description" content="Les bøker ett ord om gangen (RSVP), også uten nett.">
+  <title>Les – RSVP-leser</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    // Apply the saved theme before first paint to avoid a flash.
+    try {
+      var saved = JSON.parse(localStorage.getItem('rsvp-settings') || '{}');
+      if (saved.theme) document.documentElement.dataset.theme = saved.theme;
+    } catch (e) {}
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <main id="app" aria-live="polite"></main>
+  <div id="toasts" class="toasts" role="status"></div>
+  <noscript>Denne appen krever JavaScript.</noscript>
+</body>
+</html>

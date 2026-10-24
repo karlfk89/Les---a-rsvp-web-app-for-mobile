@@ -9,6 +9,8 @@ const NUMBER_HEAD = /^[-+−(]?\d{1,3}$/;
 const NUMBER_GROUP = /^\d{3}$/;
 const NUMBER_TAIL = /^\d{3}(?:[.,]\d+)?[^\p{L}\p{N}]*$/u;
 const OPENING_THEN_SPACE = /^([«„“‘‚(\[{¿¡"'‹]+) /u;
+// A dash written without spaces between two words («dialogue—perhaps»).
+const UNSPACED_DASH = /([\p{L}\p{N},.;:!?»”’)])([—–])(?=[\p{L}\p{N}«“‘(])/gu;
 
 // «1 000» may take another group; «1 000,» or «1814» may not.
 function canTakeNumberGroup(token) {
@@ -22,7 +24,7 @@ const isDash = (token) => [...token].every((ch) => DASHES.has(ch));
 export function tokenizeParagraph(text) {
   // Join Norwegian number groups: «1 000 000», «kr 12 500».
   const tokens = [];
-  for (const token of text.split(' ')) {
+  for (const token of text.replace(UNSPACED_DASH, '$1$2 ').split(' ')) {
     if (!token) continue;
     const previous = tokens[tokens.length - 1];
     if (previous !== undefined && canTakeNumberGroup(previous) && NUMBER_TAIL.test(token)) {

@@ -205,13 +205,22 @@ export function endsSentence(word, nextWord, lang) {
 
 const scaled = (percent, delayMs) => (percent * delayMs) / 100;
 
-export function wordDurationMs(word, { wpm, pacing = DEFAULT_PACING, lang = 'nb', nextWord, paragraphEnd = false }) {
+// The time a word is shown, split into reading the word itself (`core`) and
+// the pause after it (`pause`), so a word shown in parts can be timed per part.
+export function wordTiming(word, { wpm, pacing = DEFAULT_PACING, lang = 'nb', nextWord, paragraphEnd = false }) {
   const base = 60000 / wpm;
-  if (!word) return base;
+  if (!word) return { core: base, pause: 0 };
   let punctuation = punctuationPausePercent(word, paragraphEnd ? undefined : nextWord, lang);
   if (paragraphEnd) punctuation = Math.max(punctuation, PAUSE.sentence);
-  return base +
-    scaled(lengthBonusPercent(word), pacing.longWordDelayMs) +
-    scaled(complexityBonusPercent(word, lang), pacing.complexWordDelayMs) +
-    scaled(punctuation, pacing.punctuationDelayMs);
+  return {
+    core: base +
+      scaled(lengthBonusPercent(word), pacing.longWordDelayMs) +
+      scaled(complexityBonusPercent(word, lang), pacing.complexWordDelayMs),
+    pause: scaled(punctuation, pacing.punctuationDelayMs),
+  };
+}
+
+export function wordDurationMs(word, options) {
+  const { core, pause } = wordTiming(word, options);
+  return core + pause;
 }

@@ -10,6 +10,8 @@ export const DEFAULT_SETTINGS = {
   readingMode: 'tap',
   pacing: { ...DEFAULT_PACING },
   phantomWords: true,
+  splitLongWords: true,
+  splitLength: 13,
   showContext: true,
   guides: true,
   focusColor: 'accent',
@@ -21,6 +23,8 @@ export const DEFAULT_SETTINGS = {
 
 export const WPM_MIN = 50;
 export const WPM_MAX = 1200;
+export const SPLIT_MIN = 10;
+export const SPLIT_MAX = 20;
 
 export const FONTS = {
   serif: { label: 'Serif', css: 'ui-serif, "New York", Georgia, "Times New Roman", serif' },
@@ -63,6 +67,8 @@ export function normalizeSettings(raw) {
     pacing: Object.fromEntries(Object.entries(DEFAULT_PACING)
       .map(([key, fallback]) => [key, number(pacingSource[key], fallback, 0, 600)])),
     phantomWords: flag('phantomWords'),
+    splitLongWords: flag('splitLongWords'),
+    splitLength: number(source.splitLength, DEFAULT_SETTINGS.splitLength, SPLIT_MIN, SPLIT_MAX),
     showContext: flag('showContext'),
     guides: flag('guides'),
     focusColor: choice('focusColor', FOCUS_COLORS),

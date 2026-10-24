@@ -15,6 +15,9 @@ Proxmox. Tempo- og fokusreglene bygger på [RSVP Nano](https://github.com/ionutd
   mens du leser; ellers brukes standardhastigheten.
 - **Norsk**: æøå, «sitater», replikkstrek, tallgrupper som «1 500 000», desimalkomma og norske
   forkortelser (f.eks., bl.a., t.d.). Språket finnes automatisk per bok og kan endres.
+- **Lange sammensatte ord** vises i deler: «sykehus-» «parkerings-» «plassen». Delingen bruker
+  TeX-orddelingsmønstre og ord fra boka og en liste over vanlige ledd, og kan slås av eller
+  justeres (ord lengre enn 10–20 bokstaver).
 - **Navigasjon**: kapitteloversikt og kapittelhopp, tilbake til starten av setningen, ord for ord,
   glidebryter for hele boka, og avsnittet vist ved pause (trykk på et ord for å hoppe dit).
 - **Bevegelser**: sveip til siden for å spole ord for ord. Velg mellom «Trykk» (trykk starter og
@@ -40,7 +43,7 @@ Krever Node.js 22 eller nyere. Appen har ingen byggesteg; `app/` serveres som de
 
 ```sh
 npm install
-npm test               # enhetstester (tekst, tempo, import, sikkerhetskopi, bevegelser)
+npm test               # enhetstester (tekst, tempo, orddeling, import, sikkerhetskopi, bevegelser)
 npm run serve          # http://localhost:8080
 npm run e2e            # ende-til-ende i Chromium (krever Playwright)
 npm run precache       # etter endringer i app/: oppdaterer filliste og versjon i sw.js
@@ -52,7 +55,7 @@ npm run precache       # etter endringer i app/: oppdaterer filliste og versjon 
 | `app/js/reader` | Tempo (port fra RSVP Nano), fokusbokstav, avspillingsmotor |
 | `app/js/import` | EPUB, PDF, TXT/Markdown og HTML til kapitler og avsnitt |
 | `app/js/ui` | Bibliotek, leser, innstillinger |
-| `app/vendor` | pdf.js og fflate, kopiert fra `node_modules` med `npm run vendor` |
+| `app/vendor` | pdf.js og fflate (`npm run vendor`), orddelingsmønstre (`tools/build-hyphenation.mjs`) |
 | `deploy` | Caddy-konfigurasjon, oppsettskript for LXC og docker-compose |
 | `test` | Tester og testdata |
 
@@ -60,4 +63,7 @@ npm run precache       # etter endringer i app/: oppdaterer filliste og versjon 
 
 Tempo- og fokusreglene er portert fra RSVP Nano (MIT). PDF-støtte med
 [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0) og EPUB-utpakking med
-[fflate](https://github.com/101arrowz/fflate) (MIT).
+[fflate](https://github.com/101arrowz/fflate) (MIT). Orddelingsmønstrene i `app/vendor/hyphenation` er
+generert fra [hyph-utf8](https://github.com/hyphenation/tex-hyphen) (`tools/build-hyphenation.mjs`)
+og har sine opprinnelige lisensmerknader: norsk av Rune Kleveland og Ole Michael Selberg, engelsk
+av Gerard D.C. Kuiken.

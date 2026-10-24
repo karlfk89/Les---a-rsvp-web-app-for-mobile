@@ -4,7 +4,7 @@
 // by `npm run precache`.
 
 // <precache>
-const VERSION = '4a0598647f';
+const VERSION = 'bf6b5c44e1';
 const FILES = [
   './',
   './css/app.css',
@@ -29,6 +29,9 @@ const FILES = [
   './js/storage/db.js',
   './js/text/abbreviations.js',
   './js/text/chars.js',
+  './js/text/compound-words.js',
+  './js/text/compound.js',
+  './js/text/hyphenate.js',
   './js/text/language.js',
   './js/text/normalize.js',
   './js/text/tokenize.js',
@@ -44,6 +47,8 @@ const FILES = [
   './js/version.js',
   './manifest.webmanifest',
   './vendor/fflate.js',
+  './vendor/hyphenation/en.js',
+  './vendor/hyphenation/no.js',
   './vendor/pdfjs/pdf.min.mjs',
   './vendor/pdfjs/pdf.worker.min.mjs',
 ];

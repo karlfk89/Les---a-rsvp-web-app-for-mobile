@@ -16,7 +16,7 @@ const roundTrip = (options) => parseBackup(JSON.stringify(buildBackup({ settings
 
 test('settings from a file are validated and clamped', () => {
   const settings = normalizeSettings({
-    wpm: 99999, theme: 'constructor', font: 'mono', guides: 'yes', fontSize: Number.NaN, anchor: 10,
+    pacingModel: 2, wpm: 99999, theme: 'constructor', font: 'mono', guides: 'yes', fontSize: Number.NaN, anchor: 10,
     pacing: { punctuationDelayMs: -5, longWordDelayMs: 250 }, unknown: 1,
   });
   assert.equal(settings.wpm, 1200);

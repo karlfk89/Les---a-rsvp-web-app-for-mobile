@@ -3,10 +3,12 @@
 // chapters, speed). Tap or hold the reading area to read; swipe to step
 // through words.
 
-import { buildIndex, chapterIndexAt, estimateMs, paragraphAt, partDurations } from '../reader/book-index.js';
+import {
+  buildIndex, calibrationFactor, chapterIndexAt, estimateMs, paragraphAt, partDurations,
+} from '../reader/book-index.js';
 import { Engine } from '../reader/engine.js';
 import { splitAtFocus } from '../reader/orp.js';
-import { loadSettings, onSettingsChange, stepWpm } from '../settings.js';
+import { PACING_MODEL, bookSpeed, loadSettings, onSettingsChange, stepWpm } from '../settings.js';
 import * as db from '../storage/db.js';
 import { buildVocabulary, splitLongWord } from '../text/compound.js';
 import { loadHyphenator } from '../text/hyphenate.js';
@@ -36,9 +38,13 @@ export async function openReader(root, id) {
   let settings = loadSettings();
   // The book's own speed once − or + has been used while reading it; until
   // then it follows the standard speed from the settings.
-  let bookWpm = Number.isFinite(book.wpm) ? book.wpm : null;
+  let bookWpm = bookSpeed(book);
   const wpm = () => bookWpm ?? settings.wpm;
-  const options = () => ({ wpm: wpm(), pacing: settings.pacing, lang: book.lang });
+  // Makes the chosen speed the real average for this book; depends on the text and pause settings.
+  let calibration = calibrationFactor(index, { pacing: settings.pacing, lang: book.lang });
+  const options = () => ({
+    wpm: wpm(), pacing: settings.pacing, lang: book.lang, calibration, smoothStart: settings.smoothStart,
+  });
   let lastSaved = 0;
   let wakeLock = null;
   // Whether the control panel shows while paused. In hold-to-read mode it
@@ -281,7 +287,7 @@ export async function openReader(root, id) {
     bookWpm = value;
     applySettings();
     if (!engine.playing) renderPanel();
-    return db.updateBook(book.id, { wpm: value }).catch(() => {});
+    return db.updateBook(book.id, { wpm: value, pacingModel: PACING_MODEL }).catch(() => {});
   }
 
   const changeWpm = (direction) => setBookWpm(stepWpm(wpm(), direction));
@@ -403,8 +409,13 @@ export async function openReader(root, id) {
   };
   const onResize = () => positionWord();
   let splitKey = `${settings.splitLongWords}:${settings.splitLength}`;
+  let pacingKey = JSON.stringify(settings.pacing);
   const stopSettings = onSettingsChange(async (next) => {
     settings = next;
+    if (JSON.stringify(settings.pacing) !== pacingKey) {
+      pacingKey = JSON.stringify(settings.pacing);
+      calibration = calibrationFactor(index, { pacing: settings.pacing, lang: book.lang });
+    }
     if (!holdMode()) panelOpen = true;
     applySettings();
     updateMode();

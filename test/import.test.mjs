@@ -101,7 +101,7 @@ test('EPUB with DRM is rejected, font obfuscation is allowed', async () => {
 <enc:EncryptedData><enc:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/>
 <enc:CipherData><enc:CipherReference URI="OEBPS/text/kapittel 1.xhtml"/></enc:CipherData></enc:EncryptedData></encryption>`;
   await assert.rejects(parse(buildEpub({ title: 'T', chapters: BOKMAL_CHAPTERS, encryption: drm }), 'drm.epub'),
-    (error) => error instanceof ImportError && /DRM/.test(error.message));
+    (error) => error instanceof ImportError && error.code === 'drm');
   const fonts = `<encryption xmlns="urn:oasis:names:tc:opendocument:xmlns:container" xmlns:enc="http://www.w3.org/2001/04/xmlenc#">
 <enc:EncryptedData><enc:EncryptionMethod Algorithm="http://www.idpf.org/2008/embedding"/>
 <enc:CipherData><enc:CipherReference URI="OEBPS/fonts/a.otf"/></enc:CipherData></enc:EncryptedData></encryption>`;
@@ -133,6 +133,6 @@ test('book index exposes words, paragraphs and chapters', async () => {
 });
 
 test('unsupported formats give a clear message', async () => {
-  await assert.rejects(parse(new Uint8Array([1, 2, 0, 0, 5]), 'bok.mobi'), /Kindle/);
-  await assert.rejects(parse(new Uint8Array([1, 2, 0, 0, 5]), 'bok.bin'), /Ukjent filformat/);
+  await assert.rejects(parse(new Uint8Array([1, 2, 0, 0, 5]), 'bok.mobi'), { code: 'kindle' });
+  await assert.rejects(parse(new Uint8Array([1, 2, 0, 0, 5]), 'bok.bin'), { code: 'unknownFormat' });
 });

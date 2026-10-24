@@ -46,9 +46,9 @@ test('a backup round-trips progress, settings and optionally the text', () => {
 });
 
 test('invalid and newer backup files are rejected with a clear message', () => {
-  assert.throws(() => parseBackup('ikke json'), (e) => e instanceof BackupError && /ikke en sikkerhetskopi/.test(e.message));
-  assert.throws(() => parseBackup('{"app":"noe annet","format":1}'), BackupError);
-  assert.throws(() => parseBackup('{"app":"les-rsvp","format":99}'), /nyere versjon/);
+  assert.throws(() => parseBackup('ikke json'), (e) => e instanceof BackupError && e.code === 'notBackup');
+  assert.throws(() => parseBackup('{"app":"noe annet","format":1}'), { code: 'notBackup' });
+  assert.throws(() => parseBackup('{"app":"les-rsvp","format":99}'), { code: 'newer' });
 });
 
 test('broken book entries are dropped, broken text falls back to progress only', () => {

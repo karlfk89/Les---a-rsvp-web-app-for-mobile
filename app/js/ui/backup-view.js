@@ -1,19 +1,20 @@
-// «Sikkerhetskopi» section of the settings sheet: save progress and settings
-// to a file through the share sheet (Filer, iCloud Drive, AirDrop) and restore
-// them from such a file.
+// Backup section of the settings sheet: save progress and settings to a file
+// through the share sheet (Files, iCloud Drive, AirDrop) and restore them from
+// such a file.
 
+import { intlLocale, t } from '../i18n.js';
 import {
   BackupError, createBackupFile, lastBackupAt, markBackedUp, parseBackup, restoreBackup,
 } from '../storage/backup.js';
 import { toggle } from './controls.js';
 import { h, toast } from './dom.js';
 
-const dateTime = new Intl.DateTimeFormat('nb-NO', { dateStyle: 'medium', timeStyle: 'short' });
-const books = (n) => `${n} ${n === 1 ? 'bok' : 'bøker'}`;
+const dateTime = (date) => new Intl.DateTimeFormat(intlLocale(), { dateStyle: 'medium', timeStyle: 'short' })
+  .format(date);
 
 function lastBackupText() {
   const last = lastBackupAt();
-  return last ? `Sist lagret ${dateTime.format(last)}.` : 'Ingen sikkerhetskopi er lagret fra denne enheten ennå.';
+  return last ? t('backup.lastSaved', { date: dateTime(last) }) : t('backup.neverSaved');
 }
 
 // Opens the share sheet with the file, or downloads it where sharing files is
@@ -37,46 +38,34 @@ async function shareOrDownload(file) {
 }
 
 function describe(backup) {
-  const withText = backup.books.filter((entry) => entry.chapters).length;
-  const when = backup.exportedAt ? ` fra ${dateTime.format(backup.exportedAt)}` : '';
-  const contents = [backup.settings ? 'innstillinger' : null,
-    backup.books.length ? `fremdrift for ${books(backup.books.length)}` : null,
-    withText ? `teksten til ${books(withText)}` : null].filter(Boolean).join(', ');
-  return `Gjenopprette sikkerhetskopien${when}?\n\nDen inneholder ${contents || 'ingenting'}. ` +
-    'Fremdrift som er nyere på denne enheten, beholdes.';
-}
-
-function summary(result) {
-  const parts = [
-    result.settings ? 'Innstillingene er gjenopprettet' : null,
-    result.updated ? `${books(result.updated)} fikk fremdriften tilbake` : null,
-    result.added ? `${books(result.added)} ble lagt til` : null,
-    result.pending ? `${books(result.pending)} venter på at du legger til filen på nytt` : null,
-    result.kept ? `${books(result.kept)} hadde nyere fremdrift her og ble beholdt` : null,
-  ].filter(Boolean);
-  return parts.length ? `${parts.join('. ')}.` : 'Sikkerhetskopien inneholdt ingenting å gjenopprette.';
+  return t('backup.confirmRestore', {
+    date: backup.exportedAt ? dateTime(backup.exportedAt) : null,
+    settings: Boolean(backup.settings),
+    progress: backup.books.length,
+    text: backup.books.filter((entry) => entry.chapters).length,
+  });
 }
 
 export function backupSection({ canRestore, onRestored }) {
   let includeBooks = false;
   let ready = null;
   const last = h('p', { class: 'setting-help' }, lastBackupText());
-  const saveButton = h('button', { class: 'btn primary', type: 'button' }, 'Lag sikkerhetskopi');
+  const saveButton = h('button', { class: 'btn primary', type: 'button' }, t('backup.save'));
 
   // The file is prepared in advance so the share sheet opens directly from the
   // tap; Safari only allows sharing right after a user action.
   const prepare = () => {
     ready = null;
     saveButton.disabled = true;
-    saveButton.textContent = 'Forbereder …';
+    saveButton.textContent = t('backup.preparing');
     const options = { includeBooks };
     createBackupFile(options).then((file) => {
       if (options.includeBooks !== includeBooks) return;
       ready = file;
       saveButton.disabled = false;
-      saveButton.textContent = 'Lag sikkerhetskopi';
+      saveButton.textContent = t('backup.save');
     }).catch(() => {
-      saveButton.textContent = 'Kunne ikke lage sikkerhetskopi';
+      saveButton.textContent = t('backup.saveFailed');
     });
   };
 
@@ -97,26 +86,24 @@ export function backupSection({ canRestore, onRestored }) {
       const backup = parseBackup(await file.text());
       if (!confirm(describe(backup))) return;
       const result = await restoreBackup(backup);
-      toast(summary(result), { duration: 8000 });
+      toast(t('backup.restored', result), { duration: 8000 });
       window.dispatchEvent(new Event('library-changed'));
       onRestored?.();
     } catch (error) {
       console.error(error);
-      const message = error instanceof BackupError ? error.message : 'Kunne ikke gjenopprette sikkerhetskopien.';
+      const message = error instanceof BackupError ? t(`backupError.${error.code}`) : t('backup.restoreFailed');
       toast(message, { error: true, duration: 7000 });
     }
   });
 
   prepare();
   return h('section', null,
-    h('h3', null, 'Sikkerhetskopi'),
-    h('p', { class: 'setting-help' },
-      'Bøker og fremdrift ligger bare på denne enheten. Lagre en sikkerhetskopi i Filer eller iCloud Drive, ' +
-      'så kan du hente fremdriften og innstillingene tilbake hvis appen slettes.'),
+    h('h3', null, t('backup.title')),
+    h('p', { class: 'setting-help' }, t('backup.help')),
     toggle({
-      label: 'Ta med bøkene',
+      label: t('backup.includeBooks'),
       checked: includeBooks,
-      help: 'Gir en større fil, men du slipper å legge til bøkene på nytt.',
+      help: t('backup.includeBooksHelp'),
       onChange: (value) => {
         includeBooks = value;
         prepare();
@@ -125,8 +112,8 @@ export function backupSection({ canRestore, onRestored }) {
     h('div', { class: 'setting backup-actions' },
       saveButton,
       canRestore
-        ? h('button', { class: 'btn', type: 'button', onclick: () => fileInput.click() }, 'Gjenopprett fra fil')
+        ? h('button', { class: 'btn', type: 'button', onclick: () => fileInput.click() }, t('backup.restore'))
         : null),
-    canRestore ? fileInput : h('p', { class: 'setting-help' }, 'Gå til biblioteket for å gjenopprette en sikkerhetskopi.'),
+    canRestore ? fileInput : h('p', { class: 'setting-help' }, t('backup.restoreInLibrary')),
     last);
 }

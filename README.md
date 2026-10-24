@@ -29,6 +29,8 @@ Proxmox. Tempo- og fokusreglene bygger på [RSVP Nano](https://github.com/ionutd
 - **Sikkerhetskopi** av fremdrift og innstillinger, eventuelt med bøkene, til Filer eller iCloud
   Drive. Ved gjenoppretting beholdes den nyeste fremdriften, og fremdrift for bøker som mangler,
   brukes automatisk når samme bok legges til igjen.
+- **Grensesnitt på engelsk eller norsk**: engelsk er standard, og norsk velges under
+  Settings → Language → Norsk. Språket i appen er uavhengig av språket i bøkene.
 - Mørkt, svart, lyst og sepia tema; valg av skrift, størrelse, fokusfarge og pauser.
 
 ## Kom i gang

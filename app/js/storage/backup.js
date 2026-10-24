@@ -3,6 +3,7 @@
 // that is not on this device is kept as «pending» and applied when the same
 // book is added again. On restore, whichever side was read most recently wins.
 
+import { t } from '../i18n.js';
 import { LANGUAGES } from '../text/language.js';
 import { VERSION } from '../version.js';
 import { WPM_MAX, WPM_MIN, loadSettings, normalizeSettings, updateSettings } from '../settings.js';
@@ -12,7 +13,13 @@ export const BACKUP_APP = 'les-rsvp';
 export const BACKUP_FORMAT = 1;
 const LAST_BACKUP_KEY = 'rsvp-last-backup';
 
-export class BackupError extends Error {}
+// `code` names the problem; the interface shows it as backupError.<code>.
+export class BackupError extends Error {
+  constructor(code) {
+    super(code);
+    this.code = code;
+  }
+}
 
 const RECORD_FIELDS = {
   id: 'string',
@@ -73,13 +80,13 @@ export function parseBackup(text) {
   try {
     data = JSON.parse(text);
   } catch {
-    throw new BackupError('Filen er ikke en sikkerhetskopi fra Les.');
+    throw new BackupError('notBackup');
   }
   if (!data || data.app !== BACKUP_APP || !Number.isInteger(data.format)) {
-    throw new BackupError('Filen er ikke en sikkerhetskopi fra Les.');
+    throw new BackupError('notBackup');
   }
   if (data.format > BACKUP_FORMAT) {
-    throw new BackupError('Sikkerhetskopien er laget av en nyere versjon av appen. Oppdater appen først.');
+    throw new BackupError('newer');
   }
   const books = (Array.isArray(data.books) ? data.books : [])
     .map((raw) => ({ record: cleanRecord(raw), chapters: cleanChapters(raw?.chapters) }))
@@ -164,12 +171,13 @@ export async function createBackupFile({ includeBooks = false } = {}) {
   }
   const backup = buildBackup({ books, contents, settings: loadSettings() });
   const date = new Date().toISOString().slice(0, 10);
-  return new File([JSON.stringify(backup)], `les-sikkerhetskopi-${date}.json`, { type: 'application/json' });
+  return new File([JSON.stringify(backup)], t('backup.fileName', { date }), { type: 'application/json' });
 }
 
 export async function restoreBackup(backup) {
   const plan = planRestore(backup, await db.listBooks());
-  if (backup.settings) updateSettings(backup.settings);
+  // The interface language stays as chosen on this device; older backups do not have one.
+  if (backup.settings) updateSettings({ ...backup.settings, uiLanguage: loadSettings().uiLanguage });
   for (const { id, changes } of plan.updates) await db.updateBook(id, changes);
   for (const { record, chapters } of plan.adds) await db.addBook(record, chapters);
   if (plan.pending.length) await db.putPending(plan.pending);

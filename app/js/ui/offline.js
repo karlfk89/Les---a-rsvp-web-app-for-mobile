@@ -1,6 +1,8 @@
 // Service worker registration and the offline/installation status shown to the user.
 
+import { t } from '../i18n.js';
 import { h } from './dom.js';
+import { formatNumber } from './format.js';
 
 export const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches ||
   window.navigator.standalone === true;
@@ -47,16 +49,16 @@ export function applyUpdate() {
 
 export function updateBanner() {
   return h('div', { class: 'banner' },
-    h('span', null, 'En ny versjon av appen er klar.'),
-    h('button', { class: 'btn primary', type: 'button', onclick: applyUpdate }, 'Oppdater'));
+    h('span', null, t('update.ready')),
+    h('button', { class: 'btn primary', type: 'button', onclick: applyUpdate }, t('update.apply')));
 }
 
 export async function offlineStatus() {
-  if (!('serviceWorker' in navigator)) return 'Nettleseren støtter ikke lesing uten nett.';
-  if (!window.isSecureContext) return 'Lesing uten nett krever HTTPS.';
+  if (!('serviceWorker' in navigator)) return t('offline.unsupported');
+  if (!window.isSecureContext) return t('offline.needsHttps');
   const registration = await navigator.serviceWorker.getRegistration();
-  if (!registration?.active) return 'Laster ned appen for bruk uten nett …';
-  return '✓ Klar for bruk uten nett.';
+  if (!registration?.active) return t('offline.downloading');
+  return t('offline.ready');
 }
 
 export async function storageSummary() {
@@ -65,7 +67,7 @@ export async function storageSummary() {
     const persisted = await navigator.storage?.persisted?.();
     if (!estimate) return '';
     const mb = (estimate.usage || 0) / (1024 * 1024);
-    return `${mb < 10 ? mb.toFixed(1).replace('.', ',') : Math.round(mb)} MB brukt${persisted ? ' · varig lagring' : ''}`;
+    return t('offline.storage', { mb: formatNumber(mb, mb < 10 ? 1 : 0), persistent: persisted });
   } catch {
     return '';
   }

@@ -1,6 +1,8 @@
 // Helpers shared by the TXT and PDF importers: joining wrapped lines and
 // recognising chapter headings in plain text.
 
+import { t } from '../i18n.js';
+
 // Joins wrapped lines of one paragraph. A hyphen at the end of a line is a
 // word break («sam-» + «men» -> «sammen») when the next line starts in lower
 // case; «EU-» + «land» keeps its hyphen.
@@ -67,5 +69,5 @@ export function chaptersFromParagraphs(paragraphs, headingAt, fallbackTitle) {
 }
 
 export function titleFromFilename(filename) {
-  return filename.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim() || 'Uten tittel';
+  return filename.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim() || t('book.untitled');
 }

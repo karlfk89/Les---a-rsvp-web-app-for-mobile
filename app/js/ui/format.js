@@ -1,20 +1,30 @@
-// Norwegian formatting of durations and percentages.
+// Durations, percentages and numbers in the interface language.
+
+import { intlLocale, t } from '../i18n.js';
 
 export function formatDuration(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return '0 min';
+  if (!Number.isFinite(ms) || ms <= 0) return t('duration.minutes', { minutes: 0 });
   const minutes = Math.round(ms / 60000);
-  if (minutes < 1) return '< 1 min';
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours} t ${rest} min` : `${hours} t`;
+  if (minutes < 1) return t('duration.underMinute');
+  if (minutes < 60) return t('duration.minutes', { minutes });
+  return t('duration.hours', { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }
 
+// Below 10 % with one decimal; never rounded up to 100 % before the end.
 export function formatPercent(fraction) {
   const value = Math.max(0, Math.min(1, fraction || 0)) * 100;
-  return `${value < 10 && value > 0 ? value.toFixed(1).replace('.', ',') : Math.floor(value)} %`;
+  const shown = value < 10 && value > 0 ? formatNumber(value, 1) : formatNumber(Math.floor(value));
+  return t('percent', { value: shown });
 }
 
-export function formatNumber(value) {
-  return new Intl.NumberFormat('nb-NO').format(value);
+const numberFormats = new Map();
+
+export function formatNumber(value, decimals = 0) {
+  const key = `${intlLocale()}:${decimals}`;
+  if (!numberFormats.has(key)) {
+    numberFormats.set(key, new Intl.NumberFormat(intlLocale(), {
+      minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+    }));
+  }
+  return numberFormats.get(key).format(value);
 }

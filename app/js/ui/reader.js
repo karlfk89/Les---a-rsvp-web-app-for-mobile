@@ -3,6 +3,7 @@
 // chapters, speed). Tap or hold the reading area to read; swipe to step
 // through words.
 
+import { t } from '../i18n.js';
 import {
   buildIndex, calibrationFactor, chapterIndexAt, estimateMs, paragraphAt, partDurations,
 } from '../reader/book-index.js';
@@ -22,7 +23,7 @@ const EDGE_MARGIN = 12;
 const HOLD_LEAD_IN_MS = 60;
 
 export async function openReader(root, id) {
-  root.replaceChildren(h('div', { class: 'loading' }, 'Åpner boka …'));
+  root.replaceChildren(h('div', { class: 'loading' }, t('reader.opening')));
   const [book, content] = await Promise.all([db.getBook(id), db.getContent(id)]);
   if (!book || !content) {
     location.hash = '#/';
@@ -30,7 +31,7 @@ export async function openReader(root, id) {
   }
   const index = buildIndex(content);
   if (index.words.length === 0) {
-    toast('Boka er tom.', { error: true });
+    toast(t('reader.empty'), { error: true });
     location.hash = '#/';
     return () => {};
   }
@@ -93,7 +94,7 @@ export async function openReader(root, id) {
       if (reason === 'pause') save();
       else if (Date.now() - lastSaved > SAVE_INTERVAL_MS) save();
     },
-    onEnd: () => toast('Du har lest ut boka.'),
+    onEnd: () => toast(t('reader.end')),
   });
 
   // Saved positions are word indexes; rescale if tokenisation has changed.
@@ -118,11 +119,11 @@ export async function openReader(root, id) {
     els.hint = h('div', { class: 'reader-hint' }));
   els.thin = h('span');
   els.chapterTitle = h('span');
-  els.context = h('div', { class: 'context', 'aria-label': 'Avsnittet du leser' });
+  els.context = h('div', { class: 'context', 'aria-label': t('reader.context') });
   els.positionLeft = h('span');
   els.positionRight = h('span');
   els.scrubber = h('input', {
-    class: 'scrubber', type: 'range', min: 0, max: engine.lastIndex, step: 1, 'aria-label': 'Posisjon i boka',
+    class: 'scrubber', type: 'range', min: 0, max: engine.lastIndex, step: 1, 'aria-label': t('reader.position'),
   });
   els.playIcon = h('span');
   els.wpm = h('output', { 'aria-live': 'polite' });
@@ -134,29 +135,30 @@ export async function openReader(root, id) {
     els.stage,
     h('div', { class: 'thin-progress', 'aria-hidden': 'true' }, els.thin),
     h('header', { class: 'reader-top' },
-      button('back', 'Til biblioteket', () => { location.hash = '#/'; }),
+      button('back', t('reader.back'), () => { location.hash = '#/'; }),
       h('div', { class: 'reader-titles' }, h('strong', null, book.title), els.chapterTitle),
-      button('list', 'Kapitler', () => showChapters())),
+      button('list', t('reader.chapters'), () => showChapters())),
     h('div', { class: 'panel' },
       h('div', { class: 'panel-inner' },
         els.context,
         h('div', { class: 'position-row' }, els.positionLeft, els.positionRight),
         els.scrubber,
         h('div', { class: 'transport' },
-          button('prevChapter', 'Forrige kapittel', () => engine.jumpChapter(-1)),
-          button('rewind', 'Tilbake til starten av setningen', () => engine.rewindSentence()),
-          button('stepBack', 'Forrige ord', () => engine.step(-1)),
-          h('button', { class: 'play-btn', type: 'button', 'aria-label': 'Spill av', onclick: () => engine.toggle() },
-            els.playIcon),
-          button('stepForward', 'Neste ord', () => engine.step(1)),
-          button('list', 'Kapitler', () => showChapters()),
-          button('nextChapter', 'Neste kapittel', () => engine.jumpChapter(1))),
+          button('prevChapter', t('reader.prevChapter'), () => engine.jumpChapter(-1)),
+          button('rewind', t('reader.rewind'), () => engine.rewindSentence()),
+          button('stepBack', t('reader.prevWord'), () => engine.step(-1)),
+          h('button', {
+            class: 'play-btn', type: 'button', 'aria-label': t('reader.play'), onclick: () => engine.toggle(),
+          }, els.playIcon),
+          button('stepForward', t('reader.nextWord'), () => engine.step(1)),
+          button('list', t('reader.chapters'), () => showChapters()),
+          button('nextChapter', t('reader.nextChapter'), () => engine.jumpChapter(1))),
         h('div', { class: 'speed-row' },
           h('div', { class: 'speed' },
-            button('minus', 'Saktere', () => changeWpm(-1)),
+            button('minus', t('reader.slower'), () => changeWpm(-1)),
             els.wpm,
-            button('plus', 'Raskere', () => changeWpm(1))),
-          button('sliders', 'Innstillinger', () => openReaderSettings())))));
+            button('plus', t('reader.faster'), () => changeWpm(1))),
+          button('sliders', t('common.settings'), () => openReaderSettings())))));
 
   root.replaceChildren(view);
 
@@ -166,8 +168,8 @@ export async function openReader(root, id) {
     view.classList.toggle('no-guides', !settings.guides);
     view.classList.toggle('no-context', !settings.showContext);
     view.style.setProperty('--word-size', `${settings.fontSize}px`);
-    els.wpm.textContent = `${wpm()} ord/min`;
-    els.wpm.title = bookWpm === null ? 'Standardhastighet' : 'Egen hastighet for denne boka';
+    els.wpm.textContent = t('wpm', { wpm: wpm() });
+    els.wpm.title = bookWpm === null ? t('reader.defaultSpeed') : t('reader.bookSpeed');
   }
 
   function updateMode() {
@@ -187,11 +189,11 @@ export async function openReader(root, id) {
       els.hint.textContent = `${formatPercent(i / Math.max(1, engine.lastIndex))} · ` +
         index.chapters[chapterIndexAt(index, i)].title;
     } else if (holdMode()) {
-      els.hint.textContent = 'Hold fingeren på skjermen for å lese · trykk for meny';
+      els.hint.textContent = t('reader.hintHold');
     } else {
-      els.hint.textContent = i === 0 ? 'Trykk på ordet for å begynne' : 'Trykk for å fortsette · sveip for å spole';
+      els.hint.textContent = i === 0 ? t('reader.hintStart') : t('reader.hintResume');
     }
-    els.stage.setAttribute('aria-label', holdMode() ? 'Hold for å lese, trykk for meny' : 'Spill av eller pause');
+    els.stage.setAttribute('aria-label', holdMode() ? t('reader.stageHold') : t('reader.stageTap'));
   }
 
   // Places the word so the focus letter's centre sits on the anchor line, and
@@ -271,7 +273,9 @@ export async function openReader(root, id) {
     if (times) {
       const chapterLeft = estimateMs(index, i, chapter.end, options());
       const bookLeft = estimateMs(index, i, index.words.length, options());
-      els.positionRight.textContent = `Igjen: ${formatDuration(chapterLeft)} i kapittelet · ${formatDuration(bookLeft)} totalt`;
+      els.positionRight.textContent = t('reader.timeLeft', {
+        chapter: formatDuration(chapterLeft), book: formatDuration(bookLeft),
+      });
     }
     renderContext();
   }
@@ -322,7 +326,7 @@ export async function openReader(root, id) {
       h('span', { class: 'title' }, chapter.title),
       h('span', { class: 'pct' }, formatPercent(chapter.start / Math.max(1, engine.lastIndex))))));
     const list = h('ul', { class: 'chapter-list' }, items);
-    const close = openSheet('Kapitler', list);
+    const close = openSheet(t('reader.chapters'), list);
     items[current]?.scrollIntoView({ block: 'center' });
   }
 

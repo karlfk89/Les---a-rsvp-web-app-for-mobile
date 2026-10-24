@@ -2,10 +2,11 @@
 // and English (en). The language decides abbreviation lists and the syllable
 // estimate used for pacing.
 
+// Names and short labels are in the locale files (lang.nb, lang.nb.short, …).
 export const LANGUAGES = {
-  nb: { code: 'nb', name: 'Bokmål', short: 'BM' },
-  nn: { code: 'nn', name: 'Nynorsk', short: 'NN' },
-  en: { code: 'en', name: 'Engelsk', short: 'EN' },
+  nb: { code: 'nb' },
+  nn: { code: 'nn' },
+  en: { code: 'en' },
 };
 
 export const DEFAULT_LANGUAGE = 'nb';

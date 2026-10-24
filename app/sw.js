@@ -4,7 +4,7 @@
 // by `npm run precache`.
 
 // <precache>
-const VERSION = '2386fd5d6c';
+const VERSION = '9346598c65';
 const FILES = [
   './',
   './css/app.css',
@@ -25,12 +25,15 @@ const FILES = [
   './js/reader/orp.js',
   './js/reader/pacing.js',
   './js/settings.js',
+  './js/storage/backup.js',
   './js/storage/db.js',
   './js/text/abbreviations.js',
   './js/text/chars.js',
   './js/text/language.js',
   './js/text/normalize.js',
   './js/text/tokenize.js',
+  './js/ui/backup-view.js',
+  './js/ui/controls.js',
   './js/ui/dom.js',
   './js/ui/format.js',
   './js/ui/library.js',

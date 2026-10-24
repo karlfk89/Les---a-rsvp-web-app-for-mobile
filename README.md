@@ -18,6 +18,9 @@ Proxmox. Tempo- og fokusreglene bygger på [RSVP Nano](https://github.com/ionutd
   glidebryter for hele boka, og avsnittet vist ved pause (trykk på et ord for å hoppe dit).
 - **Uten nett**: hele appen lagres på telefonen; bøker og fremdrift ligger i telefonens lagring.
   Skjermen holdes på under lesing.
+- **Sikkerhetskopi** av fremdrift og innstillinger, eventuelt med bøkene, til Filer eller iCloud
+  Drive. Ved gjenoppretting beholdes den nyeste fremdriften, og fremdrift for bøker som mangler,
+  brukes automatisk når samme bok legges til igjen.
 - Mørkt, svart, lyst og sepia tema; valg av skrift, størrelse, fokusfarge og pauser.
 
 ## Kom i gang
@@ -34,7 +37,7 @@ Krever Node.js 22 eller nyere. Appen har ingen byggesteg; `app/` serveres som de
 
 ```sh
 npm install
-npm test               # enhetstester (tekst, tempo, import av TXT/EPUB/PDF)
+npm test               # enhetstester (tekst, tempo, import, sikkerhetskopi)
 npm run serve          # http://localhost:8080
 npm run e2e            # ende-til-ende i Chromium (krever Playwright)
 npm run precache       # etter endringer i app/: oppdaterer filliste og versjon i sw.js

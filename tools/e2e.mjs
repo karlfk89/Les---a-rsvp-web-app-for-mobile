@@ -135,6 +135,90 @@ try {
     assert.match(text, /%/);
   });
 
+  const epubCard = () => page.locator('.book:not(.pending)', { hasText: 'Testforfatter' });
+  const percentOf = async (locator) => /(\d+(?:,\d)?) %/.exec(await locator.textContent())?.[1];
+  const openBackupSettings = async () => {
+    await page.getByRole('button', { name: 'Innstillinger' }).click();
+    await page.getByRole('heading', { name: 'Sikkerhetskopi' }).waitFor();
+  };
+  const saveBackup = async (name) => {
+    const save = page.getByRole('button', { name: 'Lag sikkerhetskopi' });
+    await save.waitFor();
+    await page.waitForFunction(() => [...document.querySelectorAll('button')]
+      .some((b) => b.textContent === 'Lag sikkerhetskopi' && !b.disabled));
+    const [download] = await Promise.all([page.waitForEvent('download'), save.click()]);
+    const path = join(fixtures, name);
+    await download.saveAs(path);
+    return path;
+  };
+  const restore = async (path) => {
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('input[type=file][accept="application/json,.json"]').setInputFiles(path);
+    await page.locator('.toast', { hasText: /gjenopprettet/ }).waitFor();
+  };
+  const deleteBook = async (card) => {
+    await card.getByRole('button', { name: /Valg for/ }).click();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Slett boka' }).click();
+  };
+
+  let progressBackup;
+  let readPercent;
+  await step('saves a backup of progress and settings', async () => {
+    readPercent = await percentOf(epubCard());
+    await openBackupSettings();
+    progressBackup = await saveBackup('backup-progress.json');
+    const backup = JSON.parse(readFileSync(progressBackup, 'utf8'));
+    assert.equal(backup.app, 'les-rsvp');
+    assert.equal(backup.settings.theme, 'light');
+    assert.equal(backup.settings.wpm, 325);
+    assert.equal(backup.books.length, 3);
+    const epub = backup.books.find((b) => b.format === 'epub');
+    assert.ok(epub.position > 0 && !epub.chapters, JSON.stringify(epub));
+    assert.match(await page.locator('.settings').textContent(), /Sist lagret/);
+    await shot('10-backup-settings');
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+  });
+
+  await step('restores settings and keeps progress for a deleted book until it is added again', async () => {
+    await openBackupSettings();
+    await page.getByRole('group', { name: 'Tema' }).getByRole('button', { name: 'Mørk' }).click();
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    await deleteBook(epubCard());
+    await page.waitForFunction(() => document.querySelectorAll('.book').length === 2);
+    await openBackupSettings();
+    await restore(progressBackup);
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    const pending = page.locator('.book.pending', { hasText: 'Flyturen' });
+    await pending.waitFor();
+    assert.equal(await percentOf(pending), readPercent);
+    await shot('11-pending-progress');
+    await page.locator('input[type=file][multiple]').setInputFiles(join(fixtures, 'Flyturen.epub'));
+    await page.locator('.toast', { hasText: 'fortsetter på' }).waitFor();
+    await epubCard().waitFor();
+    assert.equal(await page.locator('.book.pending').count(), 0);
+    assert.equal(await percentOf(epubCard()), readPercent);
+  });
+
+  await step('restores a deleted book with its text from a full backup', async () => {
+    await openBackupSettings();
+    await page.getByRole('switch', { name: 'Ta med bøkene' }).check();
+    const fullBackup = await saveBackup('backup-full.json');
+    assert.ok(JSON.parse(readFileSync(fullBackup, 'utf8')).books.every((b) => b.chapters?.length));
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    await deleteBook(page.locator('.book', { hasText: 'fjellturen' }));
+    await page.waitForFunction(() => document.querySelectorAll('.book').length === 2);
+    await openBackupSettings();
+    await restore(fullBackup);
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    await page.waitForFunction(() => document.querySelectorAll('.book:not(.pending)').length === 3);
+    await page.locator('.book-open', { hasText: 'fjellturen' }).click();
+    assert.equal(await page.locator('.word').textContent(), 'Fjellturen');
+    await page.getByRole('button', { name: 'Til biblioteket' }).click();
+    await page.getByRole('heading', { name: 'Bibliotek' }).waitFor();
+  });
+
   await step('works offline after installation', async () => {
     await page.reload();
     await page.evaluate(() => navigator.serviceWorker.ready);

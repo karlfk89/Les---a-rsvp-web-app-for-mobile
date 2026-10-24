@@ -59,12 +59,13 @@ Endret for norsk:
 - [x] Innstillinger: hastighet, pauser, tema, skrift, størrelse, fokusfarge og -posisjon
 - [x] Uten nett med service worker; skjermen holdes på under lesing
 - [x] Selvhosting: Caddy-konfigurasjon, Docker og veiledning for Proxmox
-- [x] Tester: 28 enhetstester og ende-til-ende-test i Chromium (iPhone-størrelse, også i flymodus)
+- [x] Tester: enhetstester og ende-til-ende-test i Chromium (iPhone-størrelse, også i flymodus)
 
-### Fase 2: neste
+### Fase 2: pågår
 
-- [ ] Test på ekte iPhone i flymodus, og justering etter tilbakemelding
-- [ ] Eksport og import av fremdrift og innstillinger (sikkerhetskopi)
+- [x] Selvhostet på Proxmox med Tailscale-HTTPS, installert og testet på iPhone i flymodus
+- [x] Sikkerhetskopi av fremdrift og innstillinger, eventuelt med bøkene, via delingsarket;
+      gjenoppretting der nyeste fremdrift vinner, og ventende fremdrift for bøker som legges til senere
 - [ ] Sveip for å spole, og «hold for å lese»
 - [ ] Hastighet per bok
 
@@ -85,4 +86,4 @@ Endret for norsk:
 - Bøker med DRM (Adobe DRM, bibliotekapper, Bokhylla.no) kan ikke åpnes.
 - PDF uten tekstlag (skannede sider) kan ikke leses; PDF med flere spalter kan få feil rekkefølge.
 - Appen må installeres og bøkene legges til før avreise.
-- Siste test må gjøres på iPhone: testene her kjører i Chromium, ikke Safari/WebKit.
+- Testene her kjører i Chromium, ikke Safari/WebKit; nye funksjoner må prøves på iPhone.

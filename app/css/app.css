@@ -199,6 +199,12 @@ button { cursor: pointer; touch-action: manipulation; }
 .progress > span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .book-more { align-self: center; margin-right: 6px; }
 
+.pending-books { margin-top: 28px; }
+.section-title { margin: 0 0 4px; font-size: 1.05rem; }
+.pending-books .book-list { margin-top: 12px; }
+.book.pending { background: transparent; border: 1px dashed var(--line); }
+.book.pending .book-title { color: var(--muted); }
+
 .empty {
   text-align: center;
   color: var(--muted);
@@ -559,6 +565,9 @@ button { cursor: pointer; touch-action: manipulation; }
   font-size: 0.9rem;
 }
 .segmented button[aria-pressed="true"] { background: var(--surface-2); font-weight: 650; }
+
+.backup-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn[disabled] { opacity: 0.5; }
 
 .about { color: var(--muted); font-size: 0.85rem; line-height: 1.55; }
 .about a { color: var(--accent); }

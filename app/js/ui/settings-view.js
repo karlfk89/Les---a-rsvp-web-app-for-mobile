@@ -5,48 +5,21 @@ import {
   DEFAULT_SETTINGS, FOCUS_COLORS, FONTS, THEMES, WPM_MAX, WPM_MIN, loadSettings, updateSettings,
 } from '../settings.js';
 import { VERSION } from '../version.js';
+import { backupSection } from './backup-view.js';
+import { range, segmented, toggle } from './controls.js';
 import { h, openSheet } from './dom.js';
 import { offlineStatus } from './offline.js';
 
-function range({ label, min, max, step, value, format, help, onInput }) {
-  const output = h('output', null, format(value));
-  const input = h('input', { type: 'range', min, max, step, value, 'aria-label': label });
-  input.addEventListener('input', () => {
-    output.textContent = format(Number(input.value));
-    onInput(Number(input.value));
-  });
-  return h('div', { class: 'setting' },
-    h('div', { class: 'setting-label' }, h('span', null, label), output),
-    input,
-    help ? h('div', { class: 'setting-help' }, help) : null);
-}
-
-function toggle({ label, checked, help, onChange }) {
-  const input = h('input', { type: 'checkbox', role: 'switch', 'aria-label': label, checked });
-  input.addEventListener('change', () => onChange(input.checked));
-  return h('div', { class: 'setting' },
-    h('label', { class: 'setting-label' }, h('span', null, label), h('span', { class: 'switch' }, input, h('span'))),
-    help ? h('div', { class: 'setting-help' }, help) : null);
-}
-
-function segmented({ label, options, value, onChange }) {
-  const keys = Object.keys(options);
-  const buttons = keys.map((key) => h('button', {
-    type: 'button',
-    'aria-pressed': String(key === value),
-    onclick: () => {
-      buttons.forEach((button, i) => button.setAttribute('aria-pressed', String(keys[i] === key)));
-      onChange(key);
-    },
-  }, options[key]));
-  return h('div', { class: 'setting' }, h('div', { class: 'setting-label' }, h('span', null, label)),
-    h('div', { class: 'segmented', role: 'group', 'aria-label': label }, buttons));
-}
-
 const ms = (value) => `${value} ms`;
 
-export function openSettings() {
+// `canRestore` is false in the reader: restoring there would be overwritten
+// when the open book saves its position.
+export function openSettings({ canRestore = false } = {}) {
   const s = loadSettings();
+  const reopen = () => {
+    close();
+    openSettings({ canRestore });
+  };
   const setPacing = (key) => (value) => updateSettings({ pacing: { ...loadSettings().pacing, [key]: value } });
 
   const pacingSection = () => h('section', null,
@@ -65,8 +38,7 @@ export function openSettings() {
       type: 'button',
       onclick: () => {
         updateSettings({ pacing: { ...DEFAULT_PACING } });
-        close();
-        openSettings();
+        reopen();
       },
     }, 'Tilbakestill pauser')));
 
@@ -100,10 +72,11 @@ export function openSettings() {
         onChange: (font) => updateSettings({ font }) }),
       range({ label: 'Skriftstørrelse', min: 24, max: 96, step: 2, value: s.fontSize, format: (v) => `${v} px`,
         onInput: (fontSize) => updateSettings({ fontSize }) })),
+    backupSection({ canRestore, onRestored: reopen }),
     h('section', { class: 'about' },
       h('h3', null, 'Om'),
       h('p', null, status),
-      h('p', null, `Versjon ${VERSION}. Bøker og fremdrift lagres bare på denne enheten.`),
+      h('p', null, `Versjon ${VERSION}.`),
       h('p', null, 'Tempo- og fokusreglene bygger på ',
         h('a', { href: 'https://github.com/ionutdecebal/rsvpnano', target: '_blank', rel: 'noopener' }, 'RSVP Nano'),
         ' (MIT). PDF-støtte med pdf.js (Apache 2.0), EPUB-utpakking med fflate (MIT).'),
@@ -112,8 +85,7 @@ export function openSettings() {
         type: 'button',
         onclick: () => {
           updateSettings({ ...DEFAULT_SETTINGS, pacing: { ...DEFAULT_PACING } });
-          close();
-          openSettings();
+          reopen();
         },
       }, 'Tilbakestill alle innstillinger')));
 

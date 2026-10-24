@@ -11,6 +11,19 @@ import { range, segmented, toggle } from './controls.js';
 import { h, openSheet } from './dom.js';
 import { offlineStatus } from './offline.js';
 
+// The licence texts of the code and data the app includes. The file is
+// cached with the app, so this also works offline.
+async function showLicences() {
+  const text = h('pre', { class: 'licences' }, 'Laster …');
+  openSheet('Lisenser', text);
+  try {
+    const response = await fetch('third-party-notices.txt');
+    text.textContent = response.ok ? await response.text() : 'Fant ikke lisensfilen.';
+  } catch {
+    text.textContent = 'Fant ikke lisensfilen.';
+  }
+}
+
 // Pause settings are stored as milliseconds at 300 words per minute (200 is
 // the default) and shown as a percentage of the default, since they scale
 // with the speed.
@@ -116,10 +129,18 @@ export function openSettings(options = {}) {
       h('h3', null, 'Om'),
       h('p', null, status),
       h('p', null, `Versjon ${VERSION}.`),
-      h('p', null, 'Tempo- og fokusreglene bygger på ',
+      h('p', null, 'Les er fri programvare under MIT-lisensen. Tempo- og fokusreglene bygger på ',
         h('a', { href: 'https://github.com/ionutdecebal/rsvpnano', target: '_blank', rel: 'noopener' }, 'RSVP Nano'),
         ' (MIT). PDF-støtte med pdf.js (Apache 2.0), EPUB-utpakking med fflate (MIT). Orddeling med ' +
         'TeX-mønstrene fra hyph-utf8 av Rune Kleveland og Ole Michael Selberg (norsk) og Gerard D.C. Kuiken (engelsk).'),
+      h('div', { class: 'setting' }, h('button', {
+        class: 'btn',
+        type: 'button',
+        onclick: () => {
+          close();
+          showLicences();
+        },
+      }, 'Vis lisenser')),
       h('button', {
         class: 'btn',
         type: 'button',

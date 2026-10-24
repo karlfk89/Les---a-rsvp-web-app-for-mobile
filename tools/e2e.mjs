@@ -347,6 +347,18 @@ try {
     await shot('09-offline-library');
   });
 
+  await step('shows the licences, also offline', async () => {
+    await page.getByRole('button', { name: 'Innstillinger' }).click();
+    await page.getByRole('button', { name: 'Vis lisenser' }).click();
+    const licences = page.locator('.licences');
+    await page.waitForFunction(() => document.querySelector('.licences')?.textContent.includes('MIT License'));
+    const text = await licences.textContent();
+    for (const notice of ['RSVP Nano contributors', 'Mozilla Foundation', 'Denis Pushkarev', 'Arjun Barrett', 'Rune Kleveland', 'Gerard D.C. Kuiken']) {
+      assert.ok(text.includes(notice), notice);
+    }
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+  });
+
   assert.deepEqual(errors, [], 'console errors');
   console.log(`\nAll steps passed. Screenshots in ${shots}`);
 } catch (error) {

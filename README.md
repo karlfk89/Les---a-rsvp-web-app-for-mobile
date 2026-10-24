@@ -46,7 +46,7 @@ npm run precache       # etter endringer i app/: oppdaterer filliste og versjon 
 | `app/js/import` | EPUB, PDF, TXT/Markdown og HTML til kapitler og avsnitt |
 | `app/js/ui` | Bibliotek, leser, innstillinger |
 | `app/vendor` | pdf.js og fflate, kopiert fra `node_modules` med `npm run vendor` |
-| `deploy` | Caddy-konfigurasjon, Dockerfile og docker-compose |
+| `deploy` | Caddy-konfigurasjon og docker-compose |
 | `test` | Tester og testdata |
 
 ## Lisenser

@@ -161,11 +161,29 @@ try {
     await page.locator('.scrubber').fill(String(start));
   });
 
-  await step('long Norwegian compound fits on screen', async () => {
+  await step('long Norwegian compound is shown in parts', async () => {
     await page.locator('.context span', { hasText: 'arbeidsmiljøloven,' }).click();
+    assert.equal(await page.locator('.word').textContent(), 'arbeids-');
+    assert.equal(await page.locator('.phantom.next').textContent(), 'miljøloven,');
+    await shot('06-long-word');
+    await page.locator('.stage').click();
+    await page.waitForFunction(() => document.querySelector('.word').textContent === 'miljøloven,', null, { timeout: 3000 });
+    await page.waitForFunction(() => document.querySelector('.word').textContent === 'om', null, { timeout: 3000 });
+    await page.locator('.stage').click();
+  });
+
+  await step('long Norwegian compound fits on screen when shown whole', async () => {
+    await page.getByRole('button', { name: 'Innstillinger' }).click();
+    await page.getByRole('switch', { name: 'Del lange ord' }).uncheck();
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    await page.locator('.context span', { hasText: 'arbeidsmiljøloven,' }).click();
+    assert.equal(await page.locator('.word').textContent(), 'arbeidsmiljøloven,');
     const box = await page.locator('.word').boundingBox();
     assert.ok(box.x >= 0 && box.x + box.width <= 390, JSON.stringify(box));
-    await shot('06-long-word');
+    await page.getByRole('button', { name: 'Innstillinger' }).click();
+    await page.getByRole('switch', { name: 'Del lange ord' }).check();
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    assert.equal(await page.locator('.word').textContent(), 'arbeids-');
   });
 
   await step('settings change theme and speed', async () => {

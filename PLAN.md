@@ -73,7 +73,10 @@ Endret for norsk:
 
 ### Fase 3: norsk finpuss
 
-- [ ] Orddeling av svært lange sammensatte ord i to visninger (TeX `hyph-nb`/`hyph-nn`)
+- [x] Lange sammensatte ord vises i deler («sykehus-» «parkerings-» «plassen»): ordet deles i kjente
+      ledd (bokas ord og en liste over vanlige ledd, med bindebokstav og bøyning) der grensene er
+      orddelingspunkter fra TeX-mønstrene (`hyph-no`, `hyph-en-us`) eller ligger mellom kjente ord;
+      hver del får egen visningstid. Tankestrek uten mellomrom deler også ord («dialogue—perhaps»)
 - [ ] Finjustering av tempo med lengre norske tekster
 - [ ] Valgfritt: 2–3 korte ord samtidig («chunk»)
 

@@ -2,7 +2,8 @@
 
 import { DEFAULT_PACING } from '../reader/pacing.js';
 import {
-  DEFAULT_SETTINGS, FOCUS_COLORS, FONTS, READING_MODES, THEMES, WPM_MAX, WPM_MIN, loadSettings, updateSettings,
+  DEFAULT_SETTINGS, FOCUS_COLORS, FONTS, READING_MODES, SPLIT_MAX, SPLIT_MIN, THEMES, WPM_MAX, WPM_MIN, loadSettings,
+  updateSettings,
 } from '../settings.js';
 import { VERSION } from '../version.js';
 import { backupSection } from './backup-view.js';
@@ -74,6 +75,13 @@ export function openSettings(options = {}) {
       toggle({ label: 'Vis ordene før og etter', checked: s.phantomWords,
         help: 'Forrige og neste ord vises svakt på hver side.',
         onChange: (phantomWords) => updateSettings({ phantomWords }) }),
+      toggle({ label: 'Del lange ord', checked: s.splitLongWords,
+        help: 'Lange sammensatte ord vises i deler, for eksempel «sykehus-» «parkerings-» «plassen». Delene ' +
+          'følger orddelingsreglene og ord som finnes i boka.',
+        onChange: (splitLongWords) => updateSettings({ splitLongWords }) }),
+      range({ label: 'Del ord lengre enn', min: SPLIT_MIN, max: SPLIT_MAX, step: 1, value: s.splitLength,
+        format: (v) => `${v} bokstaver`,
+        onInput: (splitLength) => updateSettings({ splitLength }) }),
       toggle({ label: 'Vis avsnittet ved pause', checked: s.showContext,
         help: 'Trykk på et ord i avsnittet for å hoppe dit.',
         onChange: (showContext) => updateSettings({ showContext }) }),
@@ -100,7 +108,8 @@ export function openSettings(options = {}) {
       h('p', null, `Versjon ${VERSION}.`),
       h('p', null, 'Tempo- og fokusreglene bygger på ',
         h('a', { href: 'https://github.com/ionutdecebal/rsvpnano', target: '_blank', rel: 'noopener' }, 'RSVP Nano'),
-        ' (MIT). PDF-støtte med pdf.js (Apache 2.0), EPUB-utpakking med fflate (MIT).'),
+        ' (MIT). PDF-støtte med pdf.js (Apache 2.0), EPUB-utpakking med fflate (MIT). Orddeling med ' +
+        'TeX-mønstrene fra hyph-utf8 av Rune Kleveland og Ole Michael Selberg (norsk) og Gerard D.C. Kuiken (engelsk).'),
       h('button', {
         class: 'btn',
         type: 'button',

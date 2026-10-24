@@ -2,6 +2,8 @@
 // performance.now(), so timer jitter does not accumulate into a slower pace.
 // A late tick shows the next word immediately to catch up, like rsvpnano;
 // after a long stall (screen locked, app in background) the clock restarts.
+// A long word can be shown in parts: `timing(wordIndex)` returns one display
+// time per part, and `part` says which part is showing.
 
 import { chapterIndexAt, durationAt, sentenceStartAtOrBefore } from './book-index.js';
 
@@ -9,12 +11,14 @@ const LEAD_IN_MS = 250;
 const MAX_LAG_MS = 1000;
 
 export class Engine {
-  constructor(index, { getOptions, onChange, onEnd }) {
+  constructor(index, { getOptions, onChange, onEnd, timing }) {
     this.index = index;
     this.getOptions = getOptions;
     this.onChange = onChange;
     this.onEnd = onEnd;
+    this.timing = timing || ((wordIndex) => [durationAt(index, wordIndex, getOptions())]);
     this.wordIndex = 0;
+    this.part = 0;
     this.playing = false;
     this.timer = null;
     this.deadline = 0;
@@ -24,15 +28,19 @@ export class Engine {
     return Math.max(0, this.index.words.length - 1);
   }
 
-  duration(wordIndex = this.wordIndex) {
-    return durationAt(this.index, wordIndex, this.getOptions());
+  duration() {
+    const times = this.timing(this.wordIndex);
+    return times[Math.min(this.part, times.length - 1)];
   }
 
   // The lead-in gives the eye time to settle on the first word; hold-to-read
   // passes a shorter one since the hold delay already gives that time.
   play({ leadInMs = LEAD_IN_MS } = {}) {
     if (this.playing || this.index.words.length === 0) return;
-    if (this.wordIndex >= this.lastIndex) this.wordIndex = 0;
+    if (this.wordIndex >= this.lastIndex && this.part >= this.timing(this.wordIndex).length - 1) {
+      this.wordIndex = 0;
+      this.part = 0;
+    }
     this.playing = true;
     this.deadline = performance.now() + leadInMs + this.duration();
     this.schedule();
@@ -61,12 +69,16 @@ export class Engine {
     if (!this.playing) return;
     const now = performance.now();
     if (now - this.deadline > MAX_LAG_MS) this.deadline = now;
-    if (this.wordIndex >= this.lastIndex) {
+    if (this.part < this.timing(this.wordIndex).length - 1) {
+      this.part++;
+    } else if (this.wordIndex >= this.lastIndex) {
       this.pause();
       this.onEnd?.();
       return;
+    } else {
+      this.wordIndex++;
+      this.part = 0;
     }
-    this.wordIndex++;
     this.deadline += this.duration();
     this.onChange('word');
     this.schedule();
@@ -74,6 +86,7 @@ export class Engine {
 
   seek(wordIndex) {
     this.wordIndex = Math.min(Math.max(0, wordIndex), this.lastIndex);
+    this.part = 0;
     if (this.playing) {
       this.deadline = performance.now() + LEAD_IN_MS + this.duration();
       this.schedule();

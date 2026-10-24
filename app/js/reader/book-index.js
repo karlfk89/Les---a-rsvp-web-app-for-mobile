@@ -2,7 +2,7 @@
 // reader steps through, with paragraph and chapter boundaries.
 
 import { tokenizeParagraph } from '../text/tokenize.js';
-import { endsSentence, wordDurationMs } from './pacing.js';
+import { endsSentence, wordDurationMs, wordTiming } from './pacing.js';
 
 export function buildIndex(book) {
   const words = [];
@@ -59,6 +59,21 @@ export function durationAt(index, wordIndex, { wpm, pacing, lang }) {
     nextWord: index.words[wordIndex + 1],
     paragraphEnd: isParagraphEnd(index, wordIndex),
   });
+}
+
+// Display times for a word shown in parts («sykehus-» «parkerings-»
+// «plassen»): each part is timed like a word of its own, and the pause after
+// the word follows its last part.
+export function partDurations(index, wordIndex, parts, { wpm, pacing, lang }) {
+  const { core, pause } = wordTiming(index.words[wordIndex], {
+    wpm,
+    pacing,
+    lang,
+    nextWord: index.words[wordIndex + 1],
+    paragraphEnd: isParagraphEnd(index, wordIndex),
+  });
+  if (parts.length < 2) return [core + pause];
+  return parts.map((part, i) => wordTiming(part, { wpm, pacing, lang }).core + (i === parts.length - 1 ? pause : 0));
 }
 
 export function sentenceStartAtOrBefore(index, wordIndex, lang) {

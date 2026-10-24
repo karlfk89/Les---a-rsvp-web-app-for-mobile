@@ -3,11 +3,13 @@
 // chapters, speed). Tap or hold the reading area to read; swipe to step
 // through words.
 
-import { buildIndex, chapterIndexAt, estimateMs, paragraphAt } from '../reader/book-index.js';
+import { buildIndex, chapterIndexAt, estimateMs, paragraphAt, partDurations } from '../reader/book-index.js';
 import { Engine } from '../reader/engine.js';
 import { splitAtFocus } from '../reader/orp.js';
 import { loadSettings, onSettingsChange, stepWpm } from '../settings.js';
 import * as db from '../storage/db.js';
+import { buildVocabulary, splitLongWord } from '../text/compound.js';
+import { loadHyphenator } from '../text/hyphenate.js';
 import { h, icon, openSheet, toast } from './dom.js';
 import { formatDuration, formatPercent } from './format.js';
 import { attachGestures } from './gestures.js';
@@ -44,8 +46,41 @@ export async function openReader(root, id) {
   let panelOpen = true;
   let scrubbing = false;
 
+  // Long compounds are shown in parts («sykehus-» «parkerings-» «plassen»).
+  // The hyphenation patterns load on demand; parts are cached per word.
+  let splitWord = null;
+  let vocabulary = null;
+  const partsCache = new Map();
+  const partsAt = (wordIndex) => {
+    if (!splitWord) return [index.words[wordIndex]];
+    let parts = partsCache.get(wordIndex);
+    if (!parts) {
+      parts = splitWord(index.words[wordIndex]);
+      partsCache.set(wordIndex, parts);
+    }
+    return parts;
+  };
+  async function prepareSplitting() {
+    partsCache.clear();
+    if (!settings.splitLongWords) {
+      splitWord = null;
+      return;
+    }
+    try {
+      const points = await loadHyphenator(book.lang);
+      vocabulary ||= buildVocabulary(index.words);
+      const maxLetters = settings.splitLength;
+      splitWord = (word) => splitLongWord(word, { points, vocabulary, maxLetters });
+    } catch {
+      splitWord = null;
+    }
+    partsCache.clear();
+  }
+  await prepareSplitting();
+
   const engine = new Engine(index, {
     getOptions: options,
+    timing: (wordIndex) => partDurations(index, wordIndex, partsAt(wordIndex), options()),
     onChange: (reason) => {
       render(reason);
       if (reason === 'play' || reason === 'pause') updateMode();
@@ -178,13 +213,18 @@ export async function openReader(root, id) {
 
   function renderWord() {
     const i = engine.wordIndex;
-    const { before, focus, after } = splitAtFocus(index.words[i]);
+    const parts = partsAt(i);
+    const part = Math.min(engine.part, parts.length - 1);
+    const { before, focus, after } = splitAtFocus(parts[part]);
     els.before.textContent = before;
     els.focus.textContent = focus;
     els.after.textContent = after;
+    // The faint neighbours are the neighbouring parts of a split word, else the neighbouring words.
     const paragraph = paragraphAt(index, i);
-    els.prev.textContent = settings.phantomWords && i > paragraph.start ? index.words[i - 1] : '';
-    els.next.textContent = settings.phantomWords && i + 1 < paragraph.end ? index.words[i + 1] : '';
+    const previous = part > 0 ? parts[part - 1] : (i > paragraph.start ? index.words[i - 1] : '');
+    const next = part < parts.length - 1 ? parts[part + 1] : (i + 1 < paragraph.end ? index.words[i + 1] : '');
+    els.prev.textContent = settings.phantomWords ? previous : '';
+    els.next.textContent = settings.phantomWords ? next : '';
     positionWord();
     els.thin.style.width = `${(i / Math.max(1, engine.lastIndex)) * 100}%`;
     updateHint();
@@ -362,12 +402,19 @@ export async function openReader(root, id) {
     }
   };
   const onResize = () => positionWord();
-  const stopSettings = onSettingsChange((next) => {
+  let splitKey = `${settings.splitLongWords}:${settings.splitLength}`;
+  const stopSettings = onSettingsChange(async (next) => {
     settings = next;
     if (!holdMode()) panelOpen = true;
     applySettings();
     updateMode();
     contextParagraph = -1;
+    const key = `${settings.splitLongWords}:${settings.splitLength}`;
+    if (key !== splitKey) {
+      splitKey = key;
+      engine.part = 0;
+      await prepareSplitting();
+    }
     render('settings');
   });
 

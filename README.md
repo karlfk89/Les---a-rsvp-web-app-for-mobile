@@ -23,7 +23,8 @@ Proxmox. Tempo- og fokusreglene bygger på [RSVP Nano](https://github.com/ionutd
 ## Kom i gang
 
 Se [docs/SELVHOSTING.md](docs/SELVHOSTING.md) for oppsett på Proxmox med HTTPS og installasjon på
-iPhone. Gratis bøker finnes blant annet på [Bokselskap.no](https://www.bokselskap.no),
+iPhone. [docs/claude-for-chrome.md](docs/claude-for-chrome.md) er den samme oppskriften skrevet som
+oppdrag til Claude for Chrome. Gratis bøker finnes blant annet på [Bokselskap.no](https://www.bokselskap.no),
 [Project Gutenberg](https://www.gutenberg.org/browse/languages/no) og
 [Project Runeberg](https://runeberg.org).
 
@@ -46,7 +47,7 @@ npm run precache       # etter endringer i app/: oppdaterer filliste og versjon 
 | `app/js/import` | EPUB, PDF, TXT/Markdown og HTML til kapitler og avsnitt |
 | `app/js/ui` | Bibliotek, leser, innstillinger |
 | `app/vendor` | pdf.js og fflate, kopiert fra `node_modules` med `npm run vendor` |
-| `deploy` | Caddy-konfigurasjon og docker-compose |
+| `deploy` | Caddy-konfigurasjon, oppsettskript for LXC og docker-compose |
 | `test` | Tester og testdata |
 
 ## Lisenser

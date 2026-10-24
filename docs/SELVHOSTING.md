@@ -56,10 +56,13 @@ Start containeren og åpne konsollen. Kommandoene under kjøres som `root` i con
 ```sh
 apt update && apt install -y curl git caddy
 curl -fsSL https://tailscale.com/install.sh | sh
-tailscale up
+tailscale up --hostname=rsvp --accept-dns=false
 ```
 
-`tailscale up` skriver ut en lenke. Åpne den på PC-en og godkjenn maskinen i tailnettet ditt.
+`tailscale up` skriver ut en lenke. Åpne den på PC-en og godkjenn maskinen i tailnettet ditt. Gå
+deretter til **Machines** i Tailscale-adminpanelet, åpne menyen (**⋯**) for `rsvp` og velg
+**Disable key expiry**. Ellers må serveren logges inn på nytt etter noen måneder.
+(`--accept-dns=false` lar containerens egne DNS-innstillinger være i fred.)
 
 ## 3. Hent koden fra GitHub
 
@@ -87,19 +90,13 @@ git -C /opt/rsvp config core.sshCommand "ssh -i /root/.ssh/github_rsvp"
 ## 4. Sett opp Caddy
 
 ```sh
-ln -sf /opt/rsvp/deploy/Caddyfile /etc/caddy/Caddyfile
-mkdir -p /etc/systemd/system/caddy.service.d
-cat > /etc/systemd/system/caddy.service.d/rsvp.conf <<'EOF'
-[Service]
-Environment=APP_ROOT=/opt/rsvp/app
-Environment=SITE_ADDRESS=:80
-EOF
-systemctl daemon-reload
-systemctl restart caddy
-curl -sI http://localhost | head -1
+bash /opt/rsvp/deploy/setup-lxc.sh --auto-update
 ```
 
-Siste linje skal vise `HTTP/1.1 200 OK`.
+Skriptet kobler Caddy til `/opt/rsvp/app`, slår på automatisk oppdatering fra GitHub hver natt kl.
+04.30, og sjekker at appen svarer. Det skal avslutte med
+`OK: Caddy serverer appen på http://localhost (port 80).` Uten `--auto-update` må du hente
+oppdateringer selv (se «Oppdatere»).
 
 ## 5. Slå på HTTPS i Tailscale
 
@@ -140,12 +137,7 @@ git -C /opt/rsvp pull
 På iPhonen: slå på Tailscale og åpne appen. Når den viser **«En ny versjon av appen er klar»**,
 trykk **Oppdater**. Bøker og fremdrift beholdes.
 
-Vil du at serveren skal hente oppdateringer selv hver natt:
-
-```sh
-apt install -y cron
-echo '30 4 * * * root git -C /opt/rsvp pull --ff-only -q' > /etc/cron.d/rsvp-update
-```
+Med `--auto-update` i steg 4 skjer dette av seg selv hver natt kl. 04.30.
 
 ## Feilsøking
 
@@ -159,7 +151,8 @@ echo '30 4 * * * root git -C /opt/rsvp pull --ff-only -q' > /etc/cron.d/rsvp-upd
 
 ## Andre måter å få HTTPS på
 
-Bruker du ikke Tailscale, kan Caddy ta seg av HTTPS selv. Endre `SITE_ADDRESS` i
+Bruker du ikke Tailscale, kan Caddy ta seg av HTTPS selv. Kjør `setup-lxc.sh` som over, og endre
+deretter `SITE_ADDRESS` i
 `/etc/systemd/system/caddy.service.d/rsvp.conf` og kjør `systemctl daemon-reload` og
 `systemctl restart caddy`.
 

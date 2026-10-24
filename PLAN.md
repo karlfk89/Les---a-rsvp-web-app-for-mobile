@@ -61,14 +61,15 @@ Endret for norsk:
 - [x] Selvhosting: Caddy-konfigurasjon, Docker og veiledning for Proxmox
 - [x] Tester: enhetstester og ende-til-ende-test i Chromium (iPhone-størrelse, også i flymodus)
 
-### Fase 2: pågår
+### Fase 2: ferdig
 
 - [x] Selvhostet på Proxmox med Tailscale-HTTPS, installert og testet på iPhone i flymodus
 - [x] Sikkerhetskopi av fremdrift og innstillinger, eventuelt med bøkene, via delingsarket;
       gjenoppretting der nyeste fremdrift vinner, og ventende fremdrift for bøker som legges til senere
 - [x] Sveip for å spole (raskere sveip går lenger), og lesemodusen «Hold inne» der lesingen bare går
       mens fingeren ligger på skjermen
-- [ ] Hastighet per bok
+- [x] Hastighet per bok: − og + i leseren gir boka egen hastighet; andre bøker bruker
+      standardhastigheten, og egen hastighet kan tilbakestilles fra bokvalgene eller innstillingene
 
 ### Fase 3: norsk finpuss
 

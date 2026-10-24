@@ -1,10 +1,11 @@
 // Library: import books, list them with progress, open, change language or delete.
 
 import { ACCEPTED_FILES, ImportError, bookId, parseBook } from '../import/index.js';
+import { loadSettings } from '../settings.js';
 import { LANGUAGES } from '../text/language.js';
 import { applyPendingProgress, lastBackupAt } from '../storage/backup.js';
 import * as db from '../storage/db.js';
-import { h, icon, openSheet, toast } from './dom.js';
+import { h, icon, openSheet, setChildren, toast } from './dom.js';
 import { formatDuration, formatPercent } from './format.js';
 import {
   isStandalone, offlineStatus, onUpdateAvailable, requestPersistentStorage, storageSummary, updateBanner,
@@ -59,6 +60,22 @@ async function importFiles(files, refresh) {
 }
 
 function bookActions(book, refresh) {
+  const ownSpeed = Number.isFinite(book.wpm);
+  const speed = ownSpeed
+    ? [
+      h('p', { class: 'setting-help' }, `Egen hastighet: ${book.wpm} ord/min.`),
+      h('button', {
+        class: 'btn',
+        type: 'button',
+        onclick: async () => {
+          await db.updateBook(book.id, { wpm: null, remainingMs: null });
+          close();
+          refresh();
+        },
+      }, `Bruk standardhastighet (${loadSettings().wpm} ord/min)`),
+    ]
+    : h('p', { class: 'setting-help' },
+      `Bruker standardhastigheten (${loadSettings().wpm} ord/min). Endre med − og + mens du leser.`);
   const languageButtons = Object.values(LANGUAGES).map((lang) => h('button', {
     class: `btn${book.lang === lang.code ? ' selected' : ''}`,
     type: 'button',
@@ -69,6 +86,7 @@ function bookActions(book, refresh) {
     },
   }, `Språk: ${lang.name}`));
   const body = h('div', { class: 'action-list' },
+    speed,
     h('p', { class: 'setting-help' }, 'Språket styrer forkortelser og stavelser i tempoberegningen.'),
     languageButtons,
     h('button', {
@@ -161,12 +179,12 @@ export function openLibrary(root) {
   const refresh = async () => {
     const [books, pending] = await Promise.all([db.listBooks(), db.listPending()]);
     books.sort((a, b) => (b.openedAt || b.addedAt) - (a.openedAt || a.addedAt));
-    list.replaceChildren(
+    setChildren(list,
       books.length ? h('ul', { class: 'book-list' }, books.map((book) => bookItem(book, refresh))) : emptyState(),
       pendingSection(pending, refresh));
     const [status, storage] = await Promise.all([offlineStatus(), storageSummary()]);
     const lastBackup = lastBackupAt();
-    footer.replaceChildren(
+    setChildren(footer,
       h('div', { class: status.startsWith('✓') ? 'status-ok' : '' }, status),
       storage ? h('div', null, storage) : null,
       books.length ? h('div', null, lastBackup

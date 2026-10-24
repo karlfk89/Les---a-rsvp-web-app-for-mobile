@@ -185,6 +185,7 @@ try {
     await page.getByRole('heading', { name: 'Bibliotek' }).waitFor();
     const text = await page.locator('.book', { hasText: 'Testforfatter' }).textContent();
     assert.match(text, /%/);
+    assert.ok(!(await page.locator('#app').textContent()).includes('null'), 'no stray «null» text');
   });
 
   const epubCard = () => page.locator('.book:not(.pending)', { hasText: 'Testforfatter' });
@@ -223,10 +224,11 @@ try {
     const backup = JSON.parse(readFileSync(progressBackup, 'utf8'));
     assert.equal(backup.app, 'les-rsvp');
     assert.equal(backup.settings.theme, 'light');
-    assert.equal(backup.settings.wpm, 325);
+    assert.equal(backup.settings.wpm, 300);
     assert.equal(backup.books.length, 3);
     const epub = backup.books.find((b) => b.format === 'epub');
     assert.ok(epub.position > 0 && !epub.chapters, JSON.stringify(epub));
+    assert.equal(epub.wpm, 325);
     assert.match(await page.locator('.settings').textContent(), /Sist lagret/);
     await shot('10-backup-settings');
     await page.getByRole('button', { name: 'Ferdig' }).click();
@@ -269,6 +271,41 @@ try {
     assert.equal(await page.locator('.word').textContent(), 'Fjellturen');
     await page.getByRole('button', { name: 'Til biblioteket' }).click();
     await page.getByRole('heading', { name: 'Bibliotek' }).waitFor();
+  });
+
+  await step('remembers the speed per book', async () => {
+    const speed = () => page.locator('.speed output').textContent();
+    // The EPUB got its own speed (325) in an earlier step and kept it through the backup restore.
+    await page.locator('.book-open', { hasText: 'Testforfatter' }).click();
+    assert.equal(await speed(), '325 ord/min');
+    await page.getByRole('button', { name: 'Til biblioteket' }).click();
+    await page.locator('.book-open', { hasText: 'fjellturen' }).click();
+    assert.equal(await speed(), '300 ord/min');
+    await page.getByRole('button', { name: 'Saktere' }).click();
+    assert.equal(await speed(), '275 ord/min');
+    await page.getByRole('button', { name: 'Til biblioteket' }).click();
+    await epubCard().getByRole('button', { name: /Valg for/ }).click();
+    await page.getByText('Egen hastighet: 325 ord/min.').waitFor();
+    await page.waitForTimeout(300); // let the sheet finish sliding in
+    await shot('15-book-speed');
+    await page.getByRole('button', { name: /Bruk standardhastighet/ }).click();
+    await page.locator('.book-open', { hasText: 'Testforfatter' }).click();
+    assert.equal(await speed(), '300 ord/min');
+    await page.getByRole('button', { name: 'Innstillinger' }).click();
+    assert.ok(!(await page.getByText('har egen hastighet').count()));
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    await page.getByRole('button', { name: 'Til biblioteket' }).click();
+    await page.locator('.book-open', { hasText: 'fjellturen' }).click();
+    assert.equal(await speed(), '275 ord/min');
+    await page.getByRole('button', { name: 'Innstillinger' }).click();
+    await page.getByText('«fjellturen» har egen hastighet: 275 ord/min.').waitFor();
+    await page.getByRole('button', { name: 'Bruk standardhastighet for denne boka' }).click();
+    assert.equal(await speed(), '300 ord/min');
+    await page.getByRole('button', { name: 'Ferdig' }).click();
+    await page.getByRole('button', { name: 'Til biblioteket' }).click();
+    await page.getByRole('heading', { name: 'Bibliotek' }).waitFor();
+    await page.locator('.library-footer div').first().waitFor();
+    assert.ok(!(await page.locator('#app').textContent()).includes('null'), 'no stray «null» text');
   });
 
   await step('works offline after installation', async () => {

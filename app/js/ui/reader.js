@@ -6,7 +6,7 @@
 import { buildIndex, chapterIndexAt, estimateMs, paragraphAt } from '../reader/book-index.js';
 import { Engine } from '../reader/engine.js';
 import { splitAtFocus } from '../reader/orp.js';
-import { loadSettings, onSettingsChange, stepWpm, updateSettings } from '../settings.js';
+import { loadSettings, onSettingsChange, stepWpm } from '../settings.js';
 import * as db from '../storage/db.js';
 import { h, icon, openSheet, toast } from './dom.js';
 import { formatDuration, formatPercent } from './format.js';
@@ -32,7 +32,11 @@ export async function openReader(root, id) {
   }
 
   let settings = loadSettings();
-  const options = () => ({ wpm: settings.wpm, pacing: settings.pacing, lang: book.lang });
+  // The book's own speed once − or + has been used while reading it; until
+  // then it follows the standard speed from the settings.
+  let bookWpm = Number.isFinite(book.wpm) ? book.wpm : null;
+  const wpm = () => bookWpm ?? settings.wpm;
+  const options = () => ({ wpm: wpm(), pacing: settings.pacing, lang: book.lang });
   let lastSaved = 0;
   let wakeLock = null;
   // Whether the control panel shows while paused. In hold-to-read mode it
@@ -111,7 +115,7 @@ export async function openReader(root, id) {
             button('minus', 'Saktere', () => changeWpm(-1)),
             els.wpm,
             button('plus', 'Raskere', () => changeWpm(1))),
-          button('sliders', 'Innstillinger', () => openSettings())))));
+          button('sliders', 'Innstillinger', () => openReaderSettings())))));
 
   root.replaceChildren(view);
 
@@ -121,7 +125,8 @@ export async function openReader(root, id) {
     view.classList.toggle('no-guides', !settings.guides);
     view.classList.toggle('no-context', !settings.showContext);
     view.style.setProperty('--word-size', `${settings.fontSize}px`);
-    els.wpm.textContent = `${settings.wpm} ord/min`;
+    els.wpm.textContent = `${wpm()} ord/min`;
+    els.wpm.title = bookWpm === null ? 'Standardhastighet' : 'Egen hastighet for denne boka';
   }
 
   function updateMode() {
@@ -232,9 +237,17 @@ export async function openReader(root, id) {
 
   // ---------- Actions ----------
 
-  function changeWpm(direction) {
-    updateSettings({ wpm: stepWpm(settings.wpm, direction) });
+  function setBookWpm(value) {
+    bookWpm = value;
+    applySettings();
+    if (!engine.playing) renderPanel();
+    return db.updateBook(book.id, { wpm: value }).catch(() => {});
   }
+
+  const changeWpm = (direction) => setBookWpm(stepWpm(wpm(), direction));
+  const openReaderSettings = () => openSettings({
+    book: { title: book.title, wpm: bookWpm, resetSpeed: () => setBookWpm(null) },
+  });
 
   function save() {
     lastSaved = Date.now();

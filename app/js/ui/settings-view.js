@@ -13,12 +13,14 @@ import { offlineStatus } from './offline.js';
 const ms = (value) => `${value} ms`;
 
 // `canRestore` is false in the reader: restoring there would be overwritten
-// when the open book saves its position.
-export function openSettings({ canRestore = false } = {}) {
+// when the open book saves its position. `book` ({ title, wpm, resetSpeed })
+// is given from the reader so the book's own speed can be shown and reset.
+export function openSettings(options = {}) {
+  const { canRestore = false, book = null } = options;
   const s = loadSettings();
-  const reopen = () => {
+  const reopen = (changes = {}) => {
     close();
-    openSettings({ canRestore });
+    openSettings({ ...options, ...changes });
   };
   const setPacing = (key) => (value) => updateSettings({ pacing: { ...loadSettings().pacing, [key]: value } });
 
@@ -48,8 +50,23 @@ export function openSettings({ canRestore = false } = {}) {
   const body = h('div', { class: 'settings' },
     h('section', null,
       h('h3', null, 'Lesing'),
-      range({ label: 'Hastighet', min: WPM_MIN, max: WPM_MAX, step: 10, value: s.wpm, format: (v) => `${v} ord/min`,
+      range({ label: 'Standardhastighet', min: WPM_MIN, max: WPM_MAX, step: 10, value: s.wpm,
+        format: (v) => `${v} ord/min`,
+        help: 'Brukes for bøker der du ikke har endret hastigheten. Endrer du hastigheten med − og + mens du ' +
+          'leser, husker boka sin egen.',
         onInput: (wpm) => updateSettings({ wpm }) }),
+      book && book.wpm !== null
+        ? h('div', { class: 'setting' },
+          h('p', { class: 'setting-help' }, `«${book.title}» har egen hastighet: ${book.wpm} ord/min.`),
+          h('button', {
+            class: 'btn',
+            type: 'button',
+            onclick: async () => {
+              await book.resetSpeed();
+              reopen({ book: { ...book, wpm: null } });
+            },
+          }, 'Bruk standardhastighet for denne boka'))
+        : null,
       segmented({ label: 'Start og stopp', value: s.readingMode, options: READING_MODES,
         help: 'Trykk: trykk på ordet for å starte og stoppe. Hold inne: lesingen går bare mens du holder ' +
           'fingeren på skjermen, og et kort trykk viser menyen. Sveip til siden for å spole i begge.',

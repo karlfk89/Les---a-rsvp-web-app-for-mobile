@@ -575,6 +575,13 @@ button { cursor: pointer; touch-action: manipulation; }
 .btn[disabled] { opacity: 0.5; }
 
 .about { color: var(--muted); font-size: 0.85rem; line-height: 1.55; }
+.licences {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 0.72rem/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color: var(--text);
+}
 .about a { color: var(--accent); }
 
 /* ---------- Toasts ---------- */

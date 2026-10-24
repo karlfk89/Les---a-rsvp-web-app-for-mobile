@@ -2,6 +2,7 @@
   "name": "rsvp-leser",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "Offline RSVP reader for iPhone (PWA) with Norwegian (bokmål, nynorsk) and English support",
   "scripts": {

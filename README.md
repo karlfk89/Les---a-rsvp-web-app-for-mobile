@@ -63,9 +63,19 @@ npm run precache       # etter endringer i app/: oppdaterer filliste og versjon 
 
 ## Lisenser
 
-Tempo- og fokusreglene er portert fra RSVP Nano (MIT). PDF-støtte med
-[pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0) og EPUB-utpakking med
-[fflate](https://github.com/101arrowz/fflate) (MIT). Orddelingsmønstrene i `app/vendor/hyphenation` er
-generert fra [hyph-utf8](https://github.com/hyphenation/tex-hyphen) (`tools/build-hyphenation.mjs`)
-og har sine opprinnelige lisensmerknader: norsk av Rune Kleveland og Ole Michael Selberg, engelsk
-av Gerard D.C. Kuiken.
+Les er lisensiert under [MIT-lisensen](LICENSE).
+
+Kode og data fra andre beholder sine egne lisenser. Fullstendige lisenstekster står i
+[app/third-party-notices.txt](app/third-party-notices.txt), som også kan vises i appen under
+Innstillinger → Om → **Vis lisenser**:
+
+- Tempo- og fokusreglene er portert fra [RSVP Nano](https://github.com/ionutdecebal/rsvpnano) (MIT).
+- PDF-støtte med [pdf.js](https://github.com/mozilla/pdf.js) (Apache 2.0), med
+  [core-js](https://github.com/zloirock/core-js) (MIT) innebygd i den eldre utgaven.
+- EPUB-utpakking med [fflate](https://github.com/101arrowz/fflate) (MIT).
+- Orddelingsmønstrene i `app/vendor/hyphenation` er generert fra
+  [hyph-utf8](https://github.com/hyphenation/tex-hyphen) (`tools/build-hyphenation.mjs`) og har sine
+  opprinnelige lisensmerknader: norsk av Rune Kleveland, Ole Michael Selberg og Karl Ove Hufthammer,
+  engelsk av Gerard D.C. Kuiken.
+
+Når `app/vendor` oppdateres, må `app/third-party-notices.txt` oppdateres tilsvarende.

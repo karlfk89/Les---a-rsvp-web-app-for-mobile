@@ -1,5 +1,6 @@
 // How long each word stays on screen. Ported from rsvpnano
-// (src/reader/ReadingLoop.cpp, MIT licence) with these changes:
+// (src/reader/ReadingLoop.cpp, MIT licence; see third-party-notices.txt) with
+// these changes:
 // - Norwegian and English abbreviation lists, chosen by book language.
 // - The English silent-e syllable rule applies to English only («jente», «gate»).
 // - Short sentence-final words such as «Ja.» and «Nå.» keep their sentence pause.

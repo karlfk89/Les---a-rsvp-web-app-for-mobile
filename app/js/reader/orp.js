@@ -1,6 +1,7 @@
 // Focus letter (optimal recognition point). The ordinal rule comes from rsvpnano
-// (src/ui/screens/ReaderScreen.cpp, focusOrdinal). Only letters and digits are
-// counted, so «Hei» and «– Hei» put the focus on the same letter.
+// (src/ui/screens/ReaderScreen.cpp, focusOrdinal; MIT licence, see
+// third-party-notices.txt). Only letters and digits are counted, so «Hei» and
+// «– Hei» put the focus on the same letter.
 
 import { isWordChar } from '../text/chars.js';
 

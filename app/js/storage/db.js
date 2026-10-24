@@ -1,9 +1,10 @@
 // IndexedDB storage. `books` holds the small library records (title,
 // progress) and `content` the chapter text, so the library list never has to
-// load whole books.
+// load whole books. `pending` holds progress restored from a backup for books
+// that are not on this device yet.
 
 const DB_NAME = 'rsvp-leser';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise = null;
 
@@ -15,6 +16,7 @@ function openDb() {
         const db = request.result;
         if (!db.objectStoreNames.contains('books')) db.createObjectStore('books', { keyPath: 'id' });
         if (!db.objectStoreNames.contains('content')) db.createObjectStore('content', { keyPath: 'id' });
+        if (!db.objectStoreNames.contains('pending')) db.createObjectStore('pending', { keyPath: 'id' });
       };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
@@ -63,3 +65,13 @@ export function deleteBook(id) {
     content.delete(id);
   });
 }
+
+export const listPending = () => run('pending', 'readonly', (pending) => pending.getAll());
+
+export function putPending(records) {
+  return run('pending', 'readwrite', (pending) => {
+    for (const record of records) pending.put(record);
+  });
+}
+
+export const deletePending = (id) => run('pending', 'readwrite', (pending) => { pending.delete(id); });

@@ -41,6 +41,33 @@ export const THEMES = { dark: 'Mørk', black: 'Svart', light: 'Lys', sepia: 'Sep
 const listeners = new Set();
 let current = null;
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const isObject = (value) => Boolean(value) && typeof value === 'object';
+const hasKey = (object, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(object, key);
+
+// Keeps only known settings with valid values, so an old or edited backup file
+// cannot put the reader into a broken state.
+export function normalizeSettings(raw) {
+  const source = isObject(raw) ? raw : {};
+  const pacingSource = isObject(source.pacing) ? source.pacing : {};
+  const number = (value, fallback, min, max) => (Number.isFinite(value) ? clamp(value, min, max) : fallback);
+  const flag = (key) => (typeof source[key] === 'boolean' ? source[key] : DEFAULT_SETTINGS[key]);
+  const choice = (key, options) => (hasKey(options, source[key]) ? source[key] : DEFAULT_SETTINGS[key]);
+  return {
+    wpm: number(source.wpm, DEFAULT_SETTINGS.wpm, WPM_MIN, WPM_MAX),
+    pacing: Object.fromEntries(Object.entries(DEFAULT_PACING)
+      .map(([key, fallback]) => [key, number(pacingSource[key], fallback, 0, 600)])),
+    phantomWords: flag('phantomWords'),
+    showContext: flag('showContext'),
+    guides: flag('guides'),
+    focusColor: choice('focusColor', FOCUS_COLORS),
+    anchor: number(source.anchor, DEFAULT_SETTINGS.anchor, 25, 50),
+    theme: choice('theme', THEMES),
+    font: choice('font', FONTS),
+    fontSize: number(source.fontSize, DEFAULT_SETTINGS.fontSize, 24, 96),
+  };
+}
+
 export function loadSettings() {
   if (current) return current;
   let saved = {};
@@ -49,7 +76,7 @@ export function loadSettings() {
   } catch {
     saved = {};
   }
-  current = { ...DEFAULT_SETTINGS, ...saved, pacing: { ...DEFAULT_PACING, ...(saved.pacing || {}) } };
+  current = normalizeSettings(saved);
   return current;
 }
 

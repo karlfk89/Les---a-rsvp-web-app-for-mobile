@@ -2,6 +2,7 @@
 
 import { ACCEPTED_FILES, ImportError, bookId, parseBook } from '../import/index.js';
 import { LANGUAGES } from '../text/language.js';
+import { applyPendingProgress, lastBackupAt } from '../storage/backup.js';
 import * as db from '../storage/db.js';
 import { h, icon, openSheet, toast } from './dom.js';
 import { formatDuration, formatPercent } from './format.js';
@@ -33,7 +34,7 @@ async function importFiles(files, refresh) {
         onProgress: (fraction) => note.update(`Leser «${file.name}» … ${Math.round(fraction * 100)} %`),
       });
       const { chapters, ...info } = book;
-      await db.addBook({
+      const record = {
         ...info,
         id,
         fileName: file.name,
@@ -42,8 +43,12 @@ async function importFiles(files, refresh) {
         openedAt: 0,
         position: 0,
         remainingMs: null,
-      }, chapters);
-      note.update(`La til «${book.title}» (${LANGUAGES[book.lang].name.toLowerCase()}).`, { duration: 3500 });
+      };
+      await db.addBook(record, chapters);
+      const resumed = await applyPendingProgress(record);
+      note.update(resumed
+        ? `La til «${book.title}» og fortsetter på ${formatPercent(resumed.position / Math.max(1, book.wordCount - 1))}.`
+        : `La til «${book.title}» (${LANGUAGES[book.lang].name.toLowerCase()}).`, { duration: 3500 });
       await refresh();
     } catch (error) {
       console.error(error);
@@ -113,6 +118,32 @@ function bookItem(book, refresh) {
     }, icon('more')));
 }
 
+// Progress restored from a backup for books that are not on this device yet.
+function pendingSection(pending, refresh) {
+  if (pending.length === 0) return null;
+  return h('section', { class: 'pending-books' },
+    h('h2', { class: 'section-title' }, 'Venter på bokfilen'),
+    h('p', { class: 'setting-help' },
+      'Fremdriften for disse bøkene er hentet fra en sikkerhetskopi. Legg til den samme filen igjen, ' +
+      'så fortsetter du der du var.'),
+    h('ul', { class: 'book-list' }, pending.map((book) => h('li', { class: 'book pending' },
+      h('div', { class: 'book-open' },
+        h('span', { class: 'book-title' }, book.title),
+        book.author ? h('span', { class: 'book-author' }, book.author) : null,
+        h('span', { class: 'book-meta' },
+          h('span', null, `${formatPercent(book.position / Math.max(1, book.wordCount - 1))} lest`),
+          book.fileName ? h('span', null, book.fileName) : null)),
+      h('button', {
+        class: 'icon-btn book-more',
+        type: 'button',
+        'aria-label': `Glem fremdriften for ${book.title}`,
+        onclick: async () => {
+          await db.deletePending(book.id);
+          refresh();
+        },
+      }, icon('close'))))));
+}
+
 function emptyState() {
   return h('div', { class: 'empty' },
     h('h2', null, 'Ingen bøker ennå'),
@@ -128,14 +159,19 @@ export function openLibrary(root) {
   const footer = h('footer', { class: 'library-footer' });
 
   const refresh = async () => {
-    const books = (await db.listBooks()).sort((a, b) => (b.openedAt || b.addedAt) - (a.openedAt || a.addedAt));
-    list.replaceChildren(books.length
-      ? h('ul', { class: 'book-list' }, books.map((book) => bookItem(book, refresh)))
-      : emptyState());
+    const [books, pending] = await Promise.all([db.listBooks(), db.listPending()]);
+    books.sort((a, b) => (b.openedAt || b.addedAt) - (a.openedAt || a.addedAt));
+    list.replaceChildren(
+      books.length ? h('ul', { class: 'book-list' }, books.map((book) => bookItem(book, refresh))) : emptyState(),
+      pendingSection(pending, refresh));
     const [status, storage] = await Promise.all([offlineStatus(), storageSummary()]);
+    const lastBackup = lastBackupAt();
     footer.replaceChildren(
       h('div', { class: status.startsWith('✓') ? 'status-ok' : '' }, status),
       storage ? h('div', null, storage) : null,
+      books.length ? h('div', null, lastBackup
+        ? `Sist sikkerhetskopiert ${lastBackup.toLocaleDateString('nb-NO')}.`
+        : 'Ingen sikkerhetskopi ennå (Innstillinger → Sikkerhetskopi).') : null,
       isStandalone() ? null : h('div', null, 'Tips: Del → «Legg til på Hjem-skjerm» for å bruke appen uten nett.'));
   };
 
@@ -149,8 +185,12 @@ export function openLibrary(root) {
     h('header', { class: 'library-header' },
       h('h1', null, 'Bibliotek'),
       h('div', { class: 'library-actions' },
-        h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Innstillinger', onclick: openSettings },
-          icon('sliders')))),
+        h('button', {
+          class: 'icon-btn',
+          type: 'button',
+          'aria-label': 'Innstillinger',
+          onclick: () => openSettings({ canRestore: true }),
+        }, icon('sliders')))),
     banners,
     h('button', { class: 'btn primary import-btn', type: 'button', onclick: () => fileInput.click() },
       icon('plus'), 'Legg til bok'),
@@ -161,5 +201,9 @@ export function openLibrary(root) {
   root.replaceChildren(view);
   refresh();
   const stopUpdates = onUpdateAvailable(() => banners.replaceChildren(updateBanner()));
-  return () => stopUpdates();
+  window.addEventListener('library-changed', refresh);
+  return () => {
+    stopUpdates();
+    window.removeEventListener('library-changed', refresh);
+  };
 }

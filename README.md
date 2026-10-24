@@ -61,7 +61,7 @@ a Let's Encrypt certificate, or `https://<local-ip>` with `TLS_DIRECTIVE=tls int
 own certificate authority on a home network.
 
 ```sh
-git clone https://github.com/karlfk89/rsvp.git /opt/rsvp
+git clone https://github.com/karlfk89/Les---a-rsvp-web-app-for-mobile.git /opt/rsvp
 cd /opt/rsvp
 cp deploy/.env.example deploy/.env
 docker compose -f deploy/docker-compose.yml up -d
@@ -84,7 +84,7 @@ Then, as root in the container:
 apt update && apt install -y curl git caddy
 curl -fsSL https://tailscale.com/install.sh | sh
 tailscale up --hostname=rsvp --accept-dns=false     # open the link it prints to add the server
-git clone https://github.com/karlfk89/rsvp.git /opt/rsvp
+git clone https://github.com/karlfk89/Les---a-rsvp-web-app-for-mobile.git /opt/rsvp
 bash /opt/rsvp/deploy/setup-lxc.sh --auto-update   # Caddy on port 80, nightly git pull at 04:30
 ```
 

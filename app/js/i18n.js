@@ -18,10 +18,10 @@ export function setLocale(code) {
 
 export const getLocale = () => locale;
 
-// Locale for dates and numbers. English follows the device's own variant
-// when it has one, so a British phone gets British dates.
+// Locale for dates and numbers: the interface language, except that English
+// follows the device's own variant, so a British phone gets British dates.
 export function intlLocale() {
-  if (locale === 'nb') return 'nb-NO';
+  if (locale !== 'en') return locale;
   const device = globalThis.navigator?.language || '';
   return /^en(-|$)/i.test(device) ? device : 'en';
 }

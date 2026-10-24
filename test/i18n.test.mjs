@@ -3,14 +3,16 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { DEFAULT_UI_LANGUAGE, UI_LANGUAGES, getLocale, setLocale, t } from '../app/js/i18n.js';
+import { DEFAULT_UI_LANGUAGE, UI_LANGUAGES, getLocale, intlLocale, setLocale, t } from '../app/js/i18n.js';
 import en from '../app/js/locales/en.js';
-import nb from '../app/js/locales/nb.js';
 import { FOCUS_COLORS, FONTS, READING_MODES, THEMES, normalizeSettings } from '../app/js/settings.js';
 import { LANGUAGES } from '../app/js/text/language.js';
 import { formatDuration, formatPercent } from '../app/js/ui/format.js';
 
 const appDir = new URL('../app/js/', import.meta.url).pathname;
+const localeDir = join(appDir, 'locales');
+const locales = await Promise.all(readdirSync(localeDir).filter((name) => name.endsWith('.js')).map(async (name) =>
+  [name.replace(/\.js$/, ''), (await import(join(localeDir, name))).default]));
 const sources = (dir = appDir) => readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
   const path = join(dir, entry.name);
   if (entry.isDirectory()) return entry.name === 'locales' ? [] : sources(path);
@@ -28,11 +30,14 @@ const inLocale = (code, action) => {
   }
 };
 
-test('English and Norwegian have the same texts', () => {
-  assert.deepEqual(Object.keys(nb).sort(), Object.keys(en).sort());
-  for (const key of Object.keys(en)) {
-    assert.equal(typeof nb[key], typeof en[key], key);
-    if (Array.isArray(en[key])) assert.equal(nb[key].length, en[key].length, key);
+test('every locale file is offered and has the same texts as English', () => {
+  assert.deepEqual(locales.map(([code]) => code).sort(), Object.keys(UI_LANGUAGES).sort());
+  for (const [code, texts] of locales) {
+    assert.deepEqual(Object.keys(texts).sort(), Object.keys(en).sort(), code);
+    for (const key of Object.keys(en)) {
+      assert.equal(typeof texts[key], typeof en[key], `${code}: ${key}`);
+      if (Array.isArray(en[key])) assert.equal(texts[key].length, en[key].length, `${code}: ${key}`);
+    }
   }
 });
 
@@ -71,6 +76,7 @@ test('plurals, durations and percentages follow the language', () => {
   assert.equal(formatDuration(20000), '< 1 min');
   assert.equal(formatPercent(0.045), '4.5%');
   assert.equal(inLocale('nb', () => formatPercent(0.045)), '4,5 %');
+  assert.equal(inLocale('nb', () => new Date(2026, 9, 24).toLocaleDateString(intlLocale())), '24.10.2026');
   assert.equal(formatPercent(0.999), '99%');
   assert.equal(formatPercent(1), '100%');
   assert.equal(t('backup.restored', { settings: true, updated: 2, added: 1, pending: 0, kept: 0 }),

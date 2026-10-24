@@ -83,7 +83,7 @@ test('long Norwegian compounds get extra time', () => {
   assert.ok(lengthBonusPercent('arbeidsmiljøloven') > 100);
   const short = wordDurationMs('hus', { wpm: 300, lang: 'nb', nextWord: 'og' });
   const long = wordDurationMs('sykehusparkeringsplass', { wpm: 300, lang: 'nb', nextWord: 'og' });
-  assert.equal(short, 200);
+  assert.equal(short, 200 * 0.92);
   assert.ok(long > 500, `long compound got ${long} ms`);
 });
 

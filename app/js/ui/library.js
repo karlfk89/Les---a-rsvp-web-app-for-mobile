@@ -1,7 +1,7 @@
 // Library: import books, list them with progress, open, change language or delete.
 
 import { ACCEPTED_FILES, ImportError, bookId, parseBook } from '../import/index.js';
-import { loadSettings } from '../settings.js';
+import { bookSpeed, loadSettings } from '../settings.js';
 import { LANGUAGES } from '../text/language.js';
 import { applyPendingProgress, lastBackupAt } from '../storage/backup.js';
 import * as db from '../storage/db.js';
@@ -60,10 +60,10 @@ async function importFiles(files, refresh) {
 }
 
 function bookActions(book, refresh) {
-  const ownSpeed = Number.isFinite(book.wpm);
-  const speed = ownSpeed
+  const ownSpeed = bookSpeed(book);
+  const speed = ownSpeed !== null
     ? [
-      h('p', { class: 'setting-help' }, `Egen hastighet: ${book.wpm} ord/min.`),
+      h('p', { class: 'setting-help' }, `Egen hastighet: ${ownSpeed} ord/min.`),
       h('button', {
         class: 'btn',
         type: 'button',

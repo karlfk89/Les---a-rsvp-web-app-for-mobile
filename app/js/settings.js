@@ -6,9 +6,11 @@ import { DEFAULT_PACING } from './reader/pacing.js';
 const KEY = 'rsvp-settings';
 
 export const DEFAULT_SETTINGS = {
-  wpm: 300,
+  wpm: 250,
+  pacingModel: 2,
   readingMode: 'tap',
   pacing: { ...DEFAULT_PACING },
+  smoothStart: true,
   phantomWords: true,
   splitLongWords: true,
   splitLength: 13,
@@ -25,6 +27,23 @@ export const WPM_MIN = 50;
 export const WPM_MAX = 1200;
 export const SPLIT_MIN = 10;
 export const SPLIT_MAX = 20;
+
+// Before pacing model 2 the speed was the interval for a plain word and pauses
+// came on top, so the real average was lower (about 84 % at 300 words per
+// minute, less at higher speeds). Model 2 calibrates the pacing so the chosen
+// speed is the real average; older speeds are converted so reading feels the same.
+export const PACING_MODEL = 2;
+
+export function convertLegacyWpm(wpm) {
+  return Math.min(WPM_MAX, Math.max(WPM_MIN, Math.round(wpm / (1 + 0.00065 * wpm) / 5) * 5));
+}
+
+// A book's own speed (null when it follows the standard speed), converted if
+// it was saved before pacing model 2.
+export function bookSpeed(book) {
+  if (!Number.isFinite(book?.wpm)) return null;
+  return book.pacingModel === PACING_MODEL ? book.wpm : convertLegacyWpm(book.wpm);
+}
 
 export const FONTS = {
   serif: { label: 'Serif', css: 'ui-serif, "New York", Georgia, "Times New Roman", serif' },
@@ -61,11 +80,14 @@ export function normalizeSettings(raw) {
   const number = (value, fallback, min, max) => (Number.isFinite(value) ? clamp(value, min, max) : fallback);
   const flag = (key) => (typeof source[key] === 'boolean' ? source[key] : DEFAULT_SETTINGS[key]);
   const choice = (key, options) => (hasKey(options, source[key]) ? source[key] : DEFAULT_SETTINGS[key]);
+  const wpm = number(source.wpm, DEFAULT_SETTINGS.wpm, WPM_MIN, WPM_MAX);
   return {
-    wpm: number(source.wpm, DEFAULT_SETTINGS.wpm, WPM_MIN, WPM_MAX),
+    wpm: source.pacingModel === PACING_MODEL || !Number.isFinite(source.wpm) ? wpm : convertLegacyWpm(wpm),
+    pacingModel: PACING_MODEL,
     readingMode: choice('readingMode', READING_MODES),
     pacing: Object.fromEntries(Object.entries(DEFAULT_PACING)
       .map(([key, fallback]) => [key, number(pacingSource[key], fallback, 0, 600)])),
+    smoothStart: flag('smoothStart'),
     phantomWords: flag('phantomWords'),
     splitLongWords: flag('splitLongWords'),
     splitLength: number(source.splitLength, DEFAULT_SETTINGS.splitLength, SPLIT_MIN, SPLIT_MAX),

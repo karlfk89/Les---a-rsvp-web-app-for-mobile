@@ -5,6 +5,10 @@
 // - Short sentence-final words such as «Ja.» and «Nå.» keep their sentence pause.
 // - The en dash (tankestrek) gets the dash pause, and the end of a paragraph
 //   always gets at least a sentence pause.
+// - Bonuses and pauses scale with the word interval instead of being fixed
+//   milliseconds, so fast reading also gets shorter pauses.
+// - Short words (half of all words in Norwegian prose have three letters or
+//   fewer) get a little less time, and names inside a sentence a little more.
 
 import {
   DASHES, IGNORED_TRAILING, OPENING_PUNCTUATION, countWhere, isDigit, isLetter, isLower, isUpper, isVowel,
@@ -31,6 +35,12 @@ const MIXED_TOKEN = 22;
 const NUMERIC_TOKEN = 10;
 const DENSE_CONNECTORS = 12;
 const COMPLEX_WORD_MAX = 85;
+
+// The pause and bonus settings are milliseconds at this word interval (300
+// words per minute); at other speeds they scale with the interval.
+const REFERENCE_INTERVAL_MS = 200;
+const SHORT_WORD_FACTOR = { 1: 0.85, 2: 0.85, 3: 0.92 };
+const NAME_BONUS = 15;
 
 export const PAUSE = {
   comma: 45,
@@ -203,20 +213,33 @@ export function endsSentence(word, nextWord, lang) {
   }
 }
 
+// A capitalised word inside a sentence is usually a name, which is harder to
+// predict than an ordinary word. All-caps words have their own bonus.
+export function nameBonusPercent(word, sentenceStart) {
+  if (sentenceStart) return 0;
+  const letters = Array.from(word).filter(isLetter);
+  if (letters.length < 2 || !isUpper(letters[0]) || letters.every(isUpper)) return 0;
+  return NAME_BONUS;
+}
+
 const scaled = (percent, delayMs) => (percent * delayMs) / 100;
 
 // The time a word is shown, split into reading the word itself (`core`) and
 // the pause after it (`pause`), so a word shown in parts can be timed per part.
-export function wordTiming(word, { wpm, pacing = DEFAULT_PACING, lang = 'nb', nextWord, paragraphEnd = false }) {
+// `sentenceStart` is true unless the caller knows the word is inside a sentence.
+export function wordTiming(word, {
+  wpm, pacing = DEFAULT_PACING, lang = 'nb', nextWord, paragraphEnd = false, sentenceStart = true,
+}) {
   const base = 60000 / wpm;
   if (!word) return { core: base, pause: 0 };
+  const scale = base / REFERENCE_INTERVAL_MS;
   let punctuation = punctuationPausePercent(word, paragraphEnd ? undefined : nextWord, lang);
   if (paragraphEnd) punctuation = Math.max(punctuation, PAUSE.sentence);
+  const complexity = Math.min(COMPLEX_WORD_MAX, complexityBonusPercent(word, lang) + nameBonusPercent(word, sentenceStart));
   return {
-    core: base +
-      scaled(lengthBonusPercent(word), pacing.longWordDelayMs) +
-      scaled(complexityBonusPercent(word, lang), pacing.complexWordDelayMs),
-    pause: scaled(punctuation, pacing.punctuationDelayMs),
+    core: base * (SHORT_WORD_FACTOR[countWhere(word, isWordChar)] ?? 1) + scale * (
+      scaled(lengthBonusPercent(word), pacing.longWordDelayMs) + scaled(complexity, pacing.complexWordDelayMs)),
+    pause: scale * scaled(punctuation, pacing.punctuationDelayMs),
   };
 }
 

@@ -28,6 +28,7 @@ const RECORD_FIELDS = {
   addedAt: 'number',
   openedAt: 'number',
   wpm: 'number',
+  pacingModel: 'number',
 };
 
 // Only known fields with the right type; null when the entry is unusable.
@@ -118,7 +119,11 @@ export function progressFor(saved, book) {
     remainingMs: null,
   };
   if (saved.lang) changes.lang = saved.lang;
-  if (saved.wpm) changes.wpm = saved.wpm;
+  if (saved.wpm) {
+    changes.wpm = saved.wpm;
+    // Speeds from before pacing model 2 are converted when read (bookSpeed).
+    changes.pacingModel = saved.pacingModel ?? 1;
+  }
   return changes;
 }
 

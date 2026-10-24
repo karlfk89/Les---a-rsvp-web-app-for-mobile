@@ -11,7 +11,10 @@ import { range, segmented, toggle } from './controls.js';
 import { h, openSheet } from './dom.js';
 import { offlineStatus } from './offline.js';
 
-const ms = (value) => `${value} ms`;
+// Pause settings are stored as milliseconds at 300 words per minute (200 is
+// the default) and shown as a percentage of the default, since they scale
+// with the speed.
+const percentOfDefault = (value) => `${Math.round(value / 2)} %`;
 
 // `canRestore` is false in the reader: restoring there would be overwritten
 // when the open book saves its position. `book` ({ title, wpm, resetSpeed })
@@ -26,16 +29,23 @@ export function openSettings(options = {}) {
   const setPacing = (key) => (value) => updateSettings({ pacing: { ...loadSettings().pacing, [key]: value } });
 
   const pacingSection = () => h('section', null,
-    h('h3', null, 'Pauser'),
-    range({ label: 'Tegnsetting', min: 0, max: 600, step: 25, value: s.pacing.punctuationDelayMs, format: ms,
-      help: 'Ekstra tid etter komma, tankestrek, punktum, spørsmålstegn og avsnitt.',
+    h('h3', null, 'Pauser og rytme'),
+    h('p', { class: 'setting-help' }, '100 % er standard. Pausene følger hastigheten, og hastigheten er alltid ' +
+      'snittet med pausene medregnet: mer pause ett sted gir litt raskere visning ellers.'),
+    range({ label: 'Tegnsetting', min: 0, max: 600, step: 20, value: s.pacing.punctuationDelayMs,
+      format: percentOfDefault,
+      help: 'Pause etter komma, tankestrek, punktum, spørsmålstegn og avsnitt.',
       onInput: setPacing('punctuationDelayMs') }),
-    range({ label: 'Lange ord', min: 0, max: 600, step: 25, value: s.pacing.longWordDelayMs, format: ms,
-      help: 'Ekstra tid for lange sammensatte ord, som «arbeidsmiljøloven».',
+    range({ label: 'Lange ord', min: 0, max: 600, step: 20, value: s.pacing.longWordDelayMs, format: percentOfDefault,
+      help: 'Ekstra tid for lange ord, som «arbeidsmiljøloven».',
       onInput: setPacing('longWordDelayMs') }),
-    range({ label: 'Vanskelige ord', min: 0, max: 600, step: 25, value: s.pacing.complexWordDelayMs, format: ms,
-      help: 'Ekstra tid for ord med mange stavelser, tall og forkortelser.',
+    range({ label: 'Vanskelige ord', min: 0, max: 600, step: 20, value: s.pacing.complexWordDelayMs,
+      format: percentOfDefault,
+      help: 'Ekstra tid for ord med mange stavelser, tall, forkortelser og navn.',
       onInput: setPacing('complexWordDelayMs') }),
+    toggle({ label: 'Myk start', checked: s.smoothStart,
+      help: 'De første ordene etter at du starter, vises litt saktere, så øynene finner rytmen.',
+      onChange: (smoothStart) => updateSettings({ smoothStart }) }),
     h('div', { class: 'setting' }, h('button', {
       class: 'btn',
       type: 'button',
@@ -53,8 +63,8 @@ export function openSettings(options = {}) {
       h('h3', null, 'Lesing'),
       range({ label: 'Standardhastighet', min: WPM_MIN, max: WPM_MAX, step: 10, value: s.wpm,
         format: (v) => `${v} ord/min`,
-        help: 'Brukes for bøker der du ikke har endret hastigheten. Endrer du hastigheten med − og + mens du ' +
-          'leser, husker boka sin egen.',
+        help: 'Gjennomsnittlig lesefart med pauser. Brukes for bøker der du ikke har endret hastigheten; ' +
+          'endrer du den med − og + mens du leser, husker boka sin egen.',
         onInput: (wpm) => updateSettings({ wpm }) }),
       book && book.wpm !== null
         ? h('div', { class: 'setting' },

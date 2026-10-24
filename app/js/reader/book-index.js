@@ -51,29 +51,50 @@ export function isParagraphEnd(index, wordIndex) {
   return paragraph ? paragraph.end - 1 === wordIndex : true;
 }
 
-export function durationAt(index, wordIndex, { wpm, pacing, lang }) {
-  return wordDurationMs(index.words[wordIndex], {
+const isSentenceStart = (index, wordIndex, lang) => wordIndex === paragraphAt(index, wordIndex).start ||
+  endsSentence(index.words[wordIndex - 1], index.words[wordIndex], lang);
+
+function timingOptions(index, wordIndex, { wpm, pacing, lang }) {
+  return {
     wpm,
     pacing,
     lang,
     nextWord: index.words[wordIndex + 1],
     paragraphEnd: isParagraphEnd(index, wordIndex),
-  });
+    sentenceStart: isSentenceStart(index, wordIndex, lang),
+  };
+}
+
+// `calibration` (see calibrationFactor) scales all times so the chosen speed
+// is the real average.
+export function durationAt(index, wordIndex, options) {
+  return wordDurationMs(index.words[wordIndex], timingOptions(index, wordIndex, options)) * (options.calibration ?? 1);
 }
 
 // Display times for a word shown in parts («sykehus-» «parkerings-»
 // «plassen»): each part is timed like a word of its own, and the pause after
 // the word follows its last part.
-export function partDurations(index, wordIndex, parts, { wpm, pacing, lang }) {
-  const { core, pause } = wordTiming(index.words[wordIndex], {
-    wpm,
-    pacing,
-    lang,
-    nextWord: index.words[wordIndex + 1],
-    paragraphEnd: isParagraphEnd(index, wordIndex),
-  });
-  if (parts.length < 2) return [core + pause];
-  return parts.map((part, i) => wordTiming(part, { wpm, pacing, lang }).core + (i === parts.length - 1 ? pause : 0));
+export function partDurations(index, wordIndex, parts, options) {
+  const { core, pause } = wordTiming(index.words[wordIndex], timingOptions(index, wordIndex, options));
+  const factor = options.calibration ?? 1;
+  if (parts.length < 2) return [(core + pause) * factor];
+  const { wpm, pacing, lang } = options;
+  return parts.map((part, i) =>
+    (wordTiming(part, { wpm, pacing, lang }).core + (i === parts.length - 1 ? pause : 0)) * factor);
+}
+
+// The factor that makes the average display time over the book 60000 / wpm,
+// so the chosen speed is the real average reading speed, pauses included.
+// Bonuses and pauses scale with the speed, so this depends only on the text
+// and the pause settings.
+export function calibrationFactor(index, { pacing, lang }) {
+  const count = index.words.length;
+  if (count === 0) return 1;
+  const samples = Math.min(count, 4000);
+  const stride = count / samples;
+  let total = 0;
+  for (let s = 0; s < samples; s++) total += durationAt(index, Math.floor(s * stride), { wpm: 300, pacing, lang });
+  return 200 / (total / samples);
 }
 
 export function sentenceStartAtOrBefore(index, wordIndex, lang) {

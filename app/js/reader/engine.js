@@ -9,6 +9,9 @@ import { chapterIndexAt, durationAt, sentenceStartAtOrBefore } from './book-inde
 
 const LEAD_IN_MS = 250;
 const MAX_LAG_MS = 1000;
+// With `smoothStart`, the first words after starting are shown a little
+// longer so the eyes can find the rhythm.
+const SMOOTH_START = [1.6, 1.45, 1.3, 1.15];
 
 export class Engine {
   constructor(index, { getOptions, onChange, onEnd, timing }) {
@@ -19,6 +22,7 @@ export class Engine {
     this.timing = timing || ((wordIndex) => [durationAt(index, wordIndex, getOptions())]);
     this.wordIndex = 0;
     this.part = 0;
+    this.shown = 0;
     this.playing = false;
     this.timer = null;
     this.deadline = 0;
@@ -30,7 +34,8 @@ export class Engine {
 
   duration() {
     const times = this.timing(this.wordIndex);
-    return times[Math.min(this.part, times.length - 1)];
+    const ramp = this.getOptions().smoothStart ? SMOOTH_START[this.shown] ?? 1 : 1;
+    return times[Math.min(this.part, times.length - 1)] * ramp;
   }
 
   // The lead-in gives the eye time to settle on the first word; hold-to-read
@@ -42,6 +47,7 @@ export class Engine {
       this.part = 0;
     }
     this.playing = true;
+    this.shown = 0;
     this.deadline = performance.now() + leadInMs + this.duration();
     this.schedule();
     this.onChange('play');
@@ -79,6 +85,7 @@ export class Engine {
       this.wordIndex++;
       this.part = 0;
     }
+    this.shown++;
     this.deadline += this.duration();
     this.onChange('word');
     this.schedule();
@@ -88,6 +95,7 @@ export class Engine {
     this.wordIndex = Math.min(Math.max(0, wordIndex), this.lastIndex);
     this.part = 0;
     if (this.playing) {
+      this.shown = 0;
       this.deadline = performance.now() + LEAD_IN_MS + this.duration();
       this.schedule();
     }

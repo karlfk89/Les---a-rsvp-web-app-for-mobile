@@ -1,8 +1,8 @@
 # Les – RSVP-leser. Static files only; the app has no backend.
 #
-# SITE_ADDRESS decides how HTTPS is handled (see docs/SELVHOSTING.md):
+# SITE_ADDRESS decides how HTTPS is handled (see docs/SELF-HOSTING.md):
 #   :80                  plain HTTP behind Tailscale Serve or another HTTPS proxy (default)
-#   les.example.no       public domain, certificate from Let's Encrypt
+#   les.example.com      public domain, certificate from Let's Encrypt
 #   https://192.168.1.50 local network, with TLS_DIRECTIVE="tls internal" (Caddy's own CA)
 # TLS_DIRECTIVE is inserted as a line of its own; leave it unset otherwise.
 

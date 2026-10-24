@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sets up Caddy in a Debian 12 container to serve the app from this git
 # checkout on port 80 (HTTPS comes from `tailscale serve`, see
-# docs/SELVHOSTING.md). Safe to run again.
+# docs/SELF-HOSTING.md). Safe to run again.
 #
 #   bash /opt/rsvp/deploy/setup-lxc.sh [--auto-update]
 #
@@ -13,24 +13,24 @@ auto_update=false
 for arg in "$@"; do
   case "$arg" in
     --auto-update) auto_update=true ;;
-    *) echo "Ukjent valg: $arg" >&2; exit 2 ;;
+    *) echo "Unknown option: $arg" >&2; exit 2 ;;
   esac
 done
 
 if [[ $EUID -ne 0 ]]; then
-  echo "Kjør skriptet som root." >&2
+  echo "Run the script as root." >&2
   exit 1
 fi
 if [[ ! -f "$repo/app/index.html" ]]; then
-  echo "Fant ikke $repo/app/index.html. Klon repoet før du kjører skriptet." >&2
+  echo "Could not find $repo/app/index.html. Clone the repository before running the script." >&2
   exit 1
 fi
 
-echo "==> Installerer Caddy, git og curl"
+echo "==> Installing Caddy, git and curl"
 apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y -qq caddy git curl >/dev/null
 
-echo "==> Kobler Caddy til $repo/app"
+echo "==> Pointing Caddy at $repo/app"
 ln -sf "$repo/deploy/Caddyfile" /etc/caddy/Caddyfile
 mkdir -p /etc/systemd/system/caddy.service.d
 cat > /etc/systemd/system/caddy.service.d/rsvp.conf <<EOF
@@ -43,20 +43,20 @@ systemctl enable --quiet caddy
 systemctl restart caddy
 
 if $auto_update; then
-  echo "==> Slår på automatisk oppdatering hver natt kl. 04.30"
+  echo "==> Turning on automatic updates every night at 04:30"
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq cron >/dev/null
   echo "30 4 * * * root git -C $repo pull --ff-only -q" > /etc/cron.d/rsvp-update
 fi
 
-echo "==> Sjekker at appen svarer"
+echo "==> Checking that the app responds"
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   if curl -fsS -o /dev/null http://localhost/ && curl -fsS -o /dev/null http://localhost/sw.js; then
-    echo "OK: Caddy serverer appen på http://localhost (port 80)."
-    echo "Neste steg: tailscale serve --bg 80"
+    echo "OK: Caddy serves the app on http://localhost (port 80)."
+    echo "Next step: tailscale serve --bg 80"
     exit 0
   fi
   sleep 1
 done
-echo "FEIL: Caddy svarer ikke på port 80. Siste logglinjer:" >&2
+echo "ERROR: Caddy does not respond on port 80. Last log lines:" >&2
 journalctl -u caddy -n 20 --no-pager >&2 || true
 exit 1

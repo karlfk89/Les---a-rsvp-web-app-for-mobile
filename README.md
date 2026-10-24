@@ -92,8 +92,8 @@ Turn on MagicDNS and HTTPS certificates in the
 [Tailscale admin console](https://login.tailscale.com/admin/dns), then run `tailscale serve --bg 80`.
 It prints the address of the app.
 
-A step-by-step guide with troubleshooting, so far in Norwegian, is in
-[docs/SELVHOSTING.md](docs/SELVHOSTING.md).
+A step-by-step guide with troubleshooting and other ways to get HTTPS is in
+[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md).
 
 ### Installing on the iPhone
 

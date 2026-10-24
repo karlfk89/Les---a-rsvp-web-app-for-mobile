@@ -23,7 +23,7 @@ export function toggle({ label, checked, help, onChange }) {
     help ? h('div', { class: 'setting-help' }, help) : null);
 }
 
-export function segmented({ label, options, value, onChange }) {
+export function segmented({ label, options, value, help, onChange }) {
   const keys = Object.keys(options);
   const buttons = keys.map((key) => h('button', {
     type: 'button',
@@ -34,5 +34,6 @@ export function segmented({ label, options, value, onChange }) {
     },
   }, options[key]));
   return h('div', { class: 'setting' }, h('div', { class: 'setting-label' }, h('span', null, label)),
-    h('div', { class: 'segmented', role: 'group', 'aria-label': label }, buttons));
+    h('div', { class: 'segmented', role: 'group', 'aria-label': label }, buttons),
+    help ? h('div', { class: 'setting-help' }, help) : null);
 }

@@ -109,6 +109,58 @@ try {
     assert.equal(await page.locator('.word').textContent(), 'Boka');
   });
 
+  const position = async () => Number(await page.locator('.scrubber').inputValue());
+  const readingPoint = async () => {
+    const box = await page.locator('.stage').boundingBox();
+    return { x: box.x + box.width / 2, y: box.y + box.height * 0.3 };
+  };
+  const swipe = async (fromX, toX) => {
+    const { y } = await readingPoint();
+    await page.mouse.move(fromX, y);
+    await page.mouse.down();
+    for (let i = 1; i <= 20; i++) await page.mouse.move(fromX + ((toX - fromX) * i) / 20, y);
+    await page.mouse.up();
+  };
+
+  await step('swipes to step through words', async () => {
+    const start = await position();
+    await swipe(320, 80);
+    const forward = await position();
+    assert.ok(forward > start + 3, `${start} -> ${forward}`);
+    assert.ok(!(await page.locator('.reader.playing').count()));
+    await swipe(80, 320);
+    assert.ok(await position() < forward);
+    await page.locator('.scrubber').fill(String(start));
+    assert.equal(await page.locator('.word').textContent(), 'Boka');
+  });
+
+  await step('holds to read and taps for the menu', async () => {
+    const chooseMode = async (name) => {
+      await page.getByRole('button', { name: 'Innstillinger' }).click();
+      await page.getByRole('group', { name: 'Start og stopp' }).getByRole('button', { name }).click();
+      await page.getByRole('button', { name: 'Ferdig' }).click();
+    };
+    await chooseMode('Hold inne');
+    const start = await position();
+    const { x, y } = await readingPoint();
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.waitForTimeout(1200);
+    assert.ok(await page.locator('.reader.playing').count(), 'reading while held');
+    await shot('12-hold-reading');
+    await page.mouse.up();
+    assert.ok(!(await page.locator('.reader.playing').count()), 'paused on release');
+    assert.ok(await page.locator('.reader.panel-closed').count(), 'menu stays hidden');
+    assert.match(await page.locator('.reader-hint').textContent(), /Hold fingeren/);
+    assert.ok(await position() > start + 2);
+    await shot('13-hold-resting');
+    await page.mouse.click(x, y);
+    assert.ok(!(await page.locator('.reader.panel-closed').count()), 'a tap opens the menu');
+    assert.ok(!(await page.locator('.reader.playing').count()));
+    await chooseMode('Trykk');
+    await page.locator('.scrubber').fill(String(start));
+  });
+
   await step('long Norwegian compound fits on screen', async () => {
     await page.locator('.context span', { hasText: 'arbeidsmiljøloven,' }).click();
     const box = await page.locator('.word').boundingBox();

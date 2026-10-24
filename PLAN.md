@@ -66,7 +66,8 @@ Endret for norsk:
 - [x] Selvhostet på Proxmox med Tailscale-HTTPS, installert og testet på iPhone i flymodus
 - [x] Sikkerhetskopi av fremdrift og innstillinger, eventuelt med bøkene, via delingsarket;
       gjenoppretting der nyeste fremdrift vinner, og ventende fremdrift for bøker som legges til senere
-- [ ] Sveip for å spole, og «hold for å lese»
+- [x] Sveip for å spole (raskere sveip går lenger), og lesemodusen «Hold inne» der lesingen bare går
+      mens fingeren ligger på skjermen
 - [ ] Hastighet per bok
 
 ### Fase 3: norsk finpuss

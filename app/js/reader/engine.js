@@ -28,11 +28,13 @@ export class Engine {
     return durationAt(this.index, wordIndex, this.getOptions());
   }
 
-  play() {
+  // The lead-in gives the eye time to settle on the first word; hold-to-read
+  // passes a shorter one since the hold delay already gives that time.
+  play({ leadInMs = LEAD_IN_MS } = {}) {
     if (this.playing || this.index.words.length === 0) return;
     if (this.wordIndex >= this.lastIndex) this.wordIndex = 0;
     this.playing = true;
-    this.deadline = performance.now() + LEAD_IN_MS + this.duration();
+    this.deadline = performance.now() + leadInMs + this.duration();
     this.schedule();
     this.onChange('play');
   }

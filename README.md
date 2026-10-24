@@ -16,6 +16,8 @@ Proxmox. Tempo- og fokusreglene bygger på [RSVP Nano](https://github.com/ionutd
   forkortelser (f.eks., bl.a., t.d.). Språket finnes automatisk per bok og kan endres.
 - **Navigasjon**: kapitteloversikt og kapittelhopp, tilbake til starten av setningen, ord for ord,
   glidebryter for hele boka, og avsnittet vist ved pause (trykk på et ord for å hoppe dit).
+- **Bevegelser**: sveip til siden for å spole ord for ord. Velg mellom «Trykk» (trykk starter og
+  stopper) og «Hold inne» (lesingen går bare mens fingeren ligger på skjermen).
 - **Uten nett**: hele appen lagres på telefonen; bøker og fremdrift ligger i telefonens lagring.
   Skjermen holdes på under lesing.
 - **Sikkerhetskopi** av fremdrift og innstillinger, eventuelt med bøkene, til Filer eller iCloud
@@ -37,7 +39,7 @@ Krever Node.js 22 eller nyere. Appen har ingen byggesteg; `app/` serveres som de
 
 ```sh
 npm install
-npm test               # enhetstester (tekst, tempo, import, sikkerhetskopi)
+npm test               # enhetstester (tekst, tempo, import, sikkerhetskopi, bevegelser)
 npm run serve          # http://localhost:8080
 npm run e2e            # ende-til-ende i Chromium (krever Playwright)
 npm run precache       # etter endringer i app/: oppdaterer filliste og versjon i sw.js

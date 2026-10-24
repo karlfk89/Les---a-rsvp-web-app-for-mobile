@@ -7,6 +7,7 @@ const KEY = 'rsvp-settings';
 
 export const DEFAULT_SETTINGS = {
   wpm: 300,
+  readingMode: 'tap',
   pacing: { ...DEFAULT_PACING },
   phantomWords: true,
   showContext: true,
@@ -38,6 +39,9 @@ export const FOCUS_COLORS = {
 
 export const THEMES = { dark: 'Mørk', black: 'Svart', light: 'Lys', sepia: 'Sepia' };
 
+// tap: a tap starts and stops reading. hold: reading runs while a finger is held down.
+export const READING_MODES = { tap: 'Trykk', hold: 'Hold inne' };
+
 const listeners = new Set();
 let current = null;
 
@@ -55,6 +59,7 @@ export function normalizeSettings(raw) {
   const choice = (key, options) => (hasKey(options, source[key]) ? source[key] : DEFAULT_SETTINGS[key]);
   return {
     wpm: number(source.wpm, DEFAULT_SETTINGS.wpm, WPM_MIN, WPM_MAX),
+    readingMode: choice('readingMode', READING_MODES),
     pacing: Object.fromEntries(Object.entries(DEFAULT_PACING)
       .map(([key, fallback]) => [key, number(pacingSource[key], fallback, 0, 600)])),
     phantomWords: flag('phantomWords'),

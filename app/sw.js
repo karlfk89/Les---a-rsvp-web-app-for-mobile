@@ -4,7 +4,7 @@
 // by `npm run precache`.
 
 // <precache>
-const VERSION = '9346598c65';
+const VERSION = 'd5b4b56ccb';
 const FILES = [
   './',
   './css/app.css',
@@ -36,6 +36,7 @@ const FILES = [
   './js/ui/controls.js',
   './js/ui/dom.js',
   './js/ui/format.js',
+  './js/ui/gestures.js',
   './js/ui/library.js',
   './js/ui/offline.js',
   './js/ui/reader.js',

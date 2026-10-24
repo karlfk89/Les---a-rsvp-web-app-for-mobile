@@ -273,7 +273,8 @@ button { cursor: pointer; touch-action: manipulation; }
 .reader-titles strong { font-size: 0.95rem; }
 .reader-titles span { font-size: 0.78rem; color: var(--muted); }
 
-.stage { position: absolute; inset: 0; z-index: 1; cursor: pointer; }
+/* Gestures are handled in JS: no browser panning, zooming or text selection here. */
+.stage { position: absolute; inset: 0; z-index: 1; cursor: pointer; touch-action: none; }
 
 .word-line {
   position: absolute;
@@ -431,9 +432,13 @@ button { cursor: pointer; touch-action: manipulation; }
 .speed output { min-width: 6.2em; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
 
 .reader.playing .reader-top,
-.reader.playing .reader-hint { opacity: 0; pointer-events: none; }
-.reader.playing .panel { transform: translateY(105%); opacity: 0; pointer-events: none; }
-.reader.playing .thin-progress { opacity: 1; }
+.reader.playing .reader-hint,
+.reader.panel-closed .reader-top { opacity: 0; pointer-events: none; }
+.reader.playing .panel,
+.reader.panel-closed .panel { transform: translateY(105%); opacity: 0; pointer-events: none; }
+.reader.playing .thin-progress,
+.reader.panel-closed .thin-progress { opacity: 1; }
+.reader.scrubbing .reader-hint { color: var(--text); font-variant-numeric: tabular-nums; }
 
 .loading {
   position: fixed;

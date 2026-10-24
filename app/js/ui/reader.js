@@ -1,6 +1,7 @@
 // Reader: one word at a time with a fixed focus letter, faint previous and
 // next words, and a control panel while paused (context paragraph, position,
-// chapters, speed).
+// chapters, speed). Tap or hold the reading area to read; swipe to step
+// through words.
 
 import { buildIndex, chapterIndexAt, estimateMs, paragraphAt } from '../reader/book-index.js';
 import { Engine } from '../reader/engine.js';
@@ -9,10 +10,12 @@ import { loadSettings, onSettingsChange, stepWpm, updateSettings } from '../sett
 import * as db from '../storage/db.js';
 import { h, icon, openSheet, toast } from './dom.js';
 import { formatDuration, formatPercent } from './format.js';
+import { attachGestures } from './gestures.js';
 import { openSettings } from './settings-view.js';
 
 const SAVE_INTERVAL_MS = 4000;
 const EDGE_MARGIN = 12;
+const HOLD_LEAD_IN_MS = 60;
 
 export async function openReader(root, id) {
   root.replaceChildren(h('div', { class: 'loading' }, 'Åpner boka …'));
@@ -32,6 +35,10 @@ export async function openReader(root, id) {
   const options = () => ({ wpm: settings.wpm, pacing: settings.pacing, lang: book.lang });
   let lastSaved = 0;
   let wakeLock = null;
+  // Whether the control panel shows while paused. In hold-to-read mode it
+  // stays closed between holds and a tap opens it.
+  let panelOpen = true;
+  let scrubbing = false;
 
   const engine = new Engine(index, {
     getOptions: options,
@@ -61,7 +68,7 @@ export async function openReader(root, id) {
   };
   els.word = h('span', { class: 'word' }, els.before, els.focus, els.after);
   els.line = h('div', { class: 'word-line', 'aria-live': 'off' }, els.prev, els.word, els.next);
-  els.stage = h('div', { class: 'stage', role: 'button', 'aria-label': 'Spill av eller pause' },
+  els.stage = h('div', { class: 'stage', role: 'button' },
     h('div', { class: 'guide top' }), els.line, h('div', { class: 'guide bottom' }),
     els.hint = h('div', { class: 'reader-hint' }));
   els.thin = h('span');
@@ -119,9 +126,26 @@ export async function openReader(root, id) {
 
   function updateMode() {
     view.classList.toggle('playing', engine.playing);
+    view.classList.toggle('panel-closed', !engine.playing && !panelOpen);
     els.playIcon.replaceChildren(icon(engine.playing ? 'pause' : 'play'));
     if (engine.playing) lockScreen();
     else releaseScreen();
+    updateHint();
+  }
+
+  const holdMode = () => settings.readingMode === 'hold';
+
+  function updateHint() {
+    const i = engine.wordIndex;
+    if (scrubbing) {
+      els.hint.textContent = `${formatPercent(i / Math.max(1, engine.lastIndex))} · ` +
+        index.chapters[chapterIndexAt(index, i)].title;
+    } else if (holdMode()) {
+      els.hint.textContent = 'Hold fingeren på skjermen for å lese · trykk for meny';
+    } else {
+      els.hint.textContent = i === 0 ? 'Trykk på ordet for å begynne' : 'Trykk for å fortsette · sveip for å spole';
+    }
+    els.stage.setAttribute('aria-label', holdMode() ? 'Hold for å lese, trykk for meny' : 'Spill av eller pause');
   }
 
   // Places the word so the focus letter's centre sits on the anchor line, and
@@ -158,7 +182,7 @@ export async function openReader(root, id) {
     els.next.textContent = settings.phantomWords && i + 1 < paragraph.end ? index.words[i + 1] : '';
     positionWord();
     els.thin.style.width = `${(i / Math.max(1, engine.lastIndex)) * 100}%`;
-    els.hint.textContent = i === 0 ? 'Trykk på ordet for å begynne' : 'Trykk på ordet for å fortsette';
+    updateHint();
   }
 
   let contextParagraph = -1;
@@ -185,22 +209,25 @@ export async function openReader(root, id) {
     }
   }
 
-  function renderPanel() {
+  // Remaining time is skipped while swiping, where it would run for every word.
+  function renderPanel({ times = true } = {}) {
     const i = engine.wordIndex;
     const c = chapterIndexAt(index, i);
     const chapter = index.chapters[c];
     els.chapterTitle.textContent = `${chapter.title} · ${c + 1}/${index.chapters.length}`;
     els.scrubber.value = String(i);
-    const chapterLeft = estimateMs(index, i, chapter.end, options());
-    const bookLeft = estimateMs(index, i, index.words.length, options());
     els.positionLeft.textContent = formatPercent(i / Math.max(1, engine.lastIndex));
-    els.positionRight.textContent = `Igjen: ${formatDuration(chapterLeft)} i kapittelet · ${formatDuration(bookLeft)} totalt`;
+    if (times) {
+      const chapterLeft = estimateMs(index, i, chapter.end, options());
+      const bookLeft = estimateMs(index, i, index.words.length, options());
+      els.positionRight.textContent = `Igjen: ${formatDuration(chapterLeft)} i kapittelet · ${formatDuration(bookLeft)} totalt`;
+    }
     renderContext();
   }
 
   function render(reason) {
     renderWord();
-    if (!engine.playing || reason === 'pause') renderPanel();
+    if (!engine.playing || reason === 'pause') renderPanel({ times: !scrubbing });
   }
 
   // ---------- Actions ----------
@@ -258,7 +285,38 @@ export async function openReader(root, id) {
 
   // ---------- Events ----------
 
-  els.stage.addEventListener('click', () => engine.toggle());
+  attachGestures(els.stage, {
+    holdEnabled: holdMode,
+    onTap: () => {
+      if (holdMode()) {
+        panelOpen = !panelOpen;
+        engine.pause();
+        updateMode();
+      } else {
+        panelOpen = true;
+        engine.toggle();
+      }
+    },
+    onHoldStart: () => {
+      panelOpen = false;
+      engine.play({ leadInMs: HOLD_LEAD_IN_MS });
+    },
+    onHoldEnd: () => engine.pause(),
+    onScrubStart: () => {
+      scrubbing = true;
+      if (!holdMode()) panelOpen = true;
+      engine.pause();
+      view.classList.add('scrubbing');
+      updateMode();
+    },
+    onScrub: (steps) => engine.step(steps),
+    onScrubEnd: () => {
+      scrubbing = false;
+      view.classList.remove('scrubbing');
+      render('scrub-end');
+      save();
+    },
+  });
   els.context.addEventListener('click', (event) => {
     const w = event.target?.dataset?.w;
     if (w !== undefined) engine.seek(Number(w));
@@ -293,7 +351,9 @@ export async function openReader(root, id) {
   const onResize = () => positionWord();
   const stopSettings = onSettingsChange((next) => {
     settings = next;
+    if (!holdMode()) panelOpen = true;
     applySettings();
+    updateMode();
     contextParagraph = -1;
     render('settings');
   });

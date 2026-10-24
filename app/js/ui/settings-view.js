@@ -2,7 +2,7 @@
 
 import { DEFAULT_PACING } from '../reader/pacing.js';
 import {
-  DEFAULT_SETTINGS, FOCUS_COLORS, FONTS, THEMES, WPM_MAX, WPM_MIN, loadSettings, updateSettings,
+  DEFAULT_SETTINGS, FOCUS_COLORS, FONTS, READING_MODES, THEMES, WPM_MAX, WPM_MIN, loadSettings, updateSettings,
 } from '../settings.js';
 import { VERSION } from '../version.js';
 import { backupSection } from './backup-view.js';
@@ -50,6 +50,10 @@ export function openSettings({ canRestore = false } = {}) {
       h('h3', null, 'Lesing'),
       range({ label: 'Hastighet', min: WPM_MIN, max: WPM_MAX, step: 10, value: s.wpm, format: (v) => `${v} ord/min`,
         onInput: (wpm) => updateSettings({ wpm }) }),
+      segmented({ label: 'Start og stopp', value: s.readingMode, options: READING_MODES,
+        help: 'Trykk: trykk på ordet for å starte og stoppe. Hold inne: lesingen går bare mens du holder ' +
+          'fingeren på skjermen, og et kort trykk viser menyen. Sveip til siden for å spole i begge.',
+        onChange: (readingMode) => updateSettings({ readingMode }) }),
       toggle({ label: 'Vis ordene før og etter', checked: s.phantomWords,
         help: 'Forrige og neste ord vises svakt på hver side.',
         onChange: (phantomWords) => updateSettings({ phantomWords }) }),

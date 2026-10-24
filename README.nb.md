@@ -37,9 +37,8 @@ Proxmox. Tempo- og fokusreglene bygger på [RSVP Nano](https://github.com/ionutd
 
 ## Kom i gang
 
-Se [docs/SELVHOSTING.md](docs/SELVHOSTING.md) for oppsett på Proxmox med HTTPS og installasjon på
-iPhone. [docs/claude-for-chrome.md](docs/claude-for-chrome.md) er den samme oppskriften skrevet som
-oppdrag til Claude for Chrome. Gratis bøker finnes blant annet på [Bokselskap.no](https://www.bokselskap.no),
+Se [docs/SELF-HOSTING.md](docs/SELF-HOSTING.md) (på engelsk) for oppsett på Proxmox med HTTPS og
+installasjon på iPhone. Gratis bøker finnes blant annet på [Bokselskap.no](https://www.bokselskap.no),
 [Project Gutenberg](https://www.gutenberg.org/browse/languages/no) og
 [Project Runeberg](https://runeberg.org).
 

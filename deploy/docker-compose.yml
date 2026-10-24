@@ -1,6 +1,6 @@
 # From the repository root: docker compose -f deploy/docker-compose.yml up -d
 # Caddy serves app/ straight from this checkout, so `git pull` is the whole update.
-# Set SITE_ADDRESS (and TLS_DIRECTIVE) in deploy/.env; see docs/SELVHOSTING.md.
+# Set SITE_ADDRESS (and TLS_DIRECTIVE) in deploy/.env; see docs/SELF-HOSTING.md.
 services:
   les:
     image: caddy:2.10-alpine

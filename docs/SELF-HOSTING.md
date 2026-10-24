@@ -70,7 +70,7 @@ Then go to **Machines** in the Tailscale admin console, open the menu (**⋯**) 
 ## 3. Get the code
 
 ```sh
-git clone https://github.com/karlfk89/rsvp.git /opt/rsvp
+git clone https://github.com/karlfk89/Les---a-rsvp-web-app-for-mobile.git /opt/rsvp
 ```
 
 To host your own fork, clone that instead. If the fork is private, the server needs a **deploy
@@ -84,10 +84,10 @@ cat /root/.ssh/github_rsvp.pub
 
 Copy the line it prints. On GitHub, open the repository → **Settings** → **Deploy keys** →
 **Add deploy key**, paste the key and leave **Allow write access** unchecked. Then clone over SSH
-(replace `<you>` with your GitHub user name):
+(replace `<you>` and `<repository>` with your GitHub user name and the name of the fork):
 
 ```sh
-git -c core.sshCommand="ssh -i /root/.ssh/github_rsvp" clone git@github.com:<you>/rsvp.git /opt/rsvp
+git -c core.sshCommand="ssh -i /root/.ssh/github_rsvp" clone git@github.com:<you>/<repository>.git /opt/rsvp
 git -C /opt/rsvp config core.sshCommand "ssh -i /root/.ssh/github_rsvp"
 ```
 
@@ -179,7 +179,7 @@ If you run Docker (in a VM, or in an LXC container with nesting), `deploy/docker
 the official Caddy image and reads the files straight from the repository:
 
 ```sh
-git clone https://github.com/karlfk89/rsvp.git /opt/rsvp
+git clone https://github.com/karlfk89/Les---a-rsvp-web-app-for-mobile.git /opt/rsvp
 cd /opt/rsvp
 cp deploy/.env.example deploy/.env                    # adjust SITE_ADDRESS
 docker compose -f deploy/docker-compose.yml up -d

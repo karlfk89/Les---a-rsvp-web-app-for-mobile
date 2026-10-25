@@ -12,15 +12,32 @@
 // Words without a good segmentation (known parts covering less than half of
 // it) are left whole, unless they are more than twice the limit; those are
 // split at the hyphenation points nearest the middle.
+//
+// In Norwegian a linking s is strong evidence of a compound boundary. A part
+// ending in a word-forming suffix and s («rednings», «konsentrasjons») counts
+// as known, and so does a part of four letters or more that follows a known
+// part ending in s at a hyphenation point («stats|stipendiat»). The patterns
+// put no break in «fin-ger-spid-ser-ne», so «fingers|pidserne» is not taken.
 
 import { COMPOUND_WORDS } from './compound-words.js';
-import { isLetter, isWordChar } from './chars.js';
+import { isWordChar } from './chars.js';
 
 const MIN_PART = 3;
+// An unknown last part of three letters is nearly always an ending
+// («ekspedisjone|nes», «Taknemmelig|hed»); three-letter compound parts such as
+// hus, fly and sjø come from the word list.
+const MIN_UNKNOWN_LAST = 4;
 const PART_COST = 0.5;
 const OFF_POINT_COST = 0.25;
+// A part known only from its suffix («forsynings») loses ties to real words.
+const DERIVATION_COST = 0.25;
 const LINKING = new Set(['s', 'e']);
 const INFLECTIONS = ['ene', 'ane', 'ens', 'ets', 'en', 'et', 'er', 'ar', 'ne', 'a', 'e', 'n', 'r', 's', 't'];
+// Word-forming suffixes that take a linking s in compounds, in today's and
+// older spelling: forsynings-, informasjons-, sikkerhets-, vitenskaps-, …
+const LINKED_DERIVATION = /(?:ing|sjon|tion|het|hed|skap|skab|dom|else|itet|nad)s$/;
+const MIN_LINKED_HEAD = 4;
+const MIN_KNOWN_TAIL = 6;
 
 // Words from the book need four letters: short words such as «dig» or «ses»
 // would otherwise explain fragments of unrelated words. Three-letter compound
@@ -44,14 +61,25 @@ function isKnownWord(text, vocabulary) {
 
 const letterCount = (text) => Array.from(text).filter(isWordChar).length;
 
+const isLinkedDerivation = (part) => part.length >= 6 && LINKED_DERIVATION.test(part);
+
 // Segments a run of letters into parts; returns [text] when nothing beats
 // leaving it whole.
-function segment(text, { points, vocabulary, maxLetters }) {
+function segment(text, { points, vocabulary, maxLetters, linkingS }) {
   const lower = text.toLowerCase();
   const n = lower.length;
   const hyphenation = new Set(points(text));
   const isKnownPart = (part) => part.length >= MIN_PART &&
     (isKnownWord(part, vocabulary) || (LINKING.has(part[part.length - 1]) && isKnownWord(part.slice(0, -1), vocabulary)));
+  // A part known only from its suffix. It is better split where it ends in a
+  // known word when it is longer than the limit («polar|forsknings») or also
+  // starts with a known word («sykehus|parkerings»). A short known ending is no
+  // such evidence: «passerings» is not «passe|rings».
+  const hasKnownSplit = (start, end) => [...hyphenation].some((p) => p >= start + MIN_PART &&
+    p <= end - MIN_PART && isKnownPart(lower.slice(p, end)) &&
+    (end - start > maxLetters || (end - p >= MIN_KNOWN_TAIL && isKnownPart(lower.slice(start, p)))));
+  const isDerivation = (start, end) => linkingS && isLinkedDerivation(lower.slice(start, end)) &&
+    !hasKnownSplit(start, end);
   // Letters beyond the display limit cost as much as unknown letters, so a
   // known long part does not win over a split into shorter known parts.
   const partCost = (part, known) => PART_COST + (known ? Math.max(0, part.length - maxLetters) : part.length);
@@ -64,13 +92,17 @@ function segment(text, { points, vocabulary, maxLetters }) {
       if (start > 0 && start < MIN_PART) continue;
       const part = lower.slice(start, end);
       // The book always contains the whole word, so it is no evidence for itself.
-      const known = (start > 0 || end < n) && isKnownPart(part);
+      const plain = isKnownPart(part);
+      const derived = !plain && isDerivation(start, end);
+      const known = (start > 0 || end < n) && (plain || derived);
+      if (!known && start > 0 && end === n && part.length < MIN_UNKNOWN_LAST) continue;
       const atPoint = start === 0 || hyphenation.has(start);
       for (const previousState of [0, 1]) {
         const previous = best[start][previousState];
         if (!previous) continue;
         if (!atPoint && !(known && previousState === 1)) continue;
-        const cost = previous.cost + partCost(part, known) + (atPoint ? 0 : OFF_POINT_COST);
+        const cost = previous.cost + partCost(part, known) + (known && derived ? DERIVATION_COST : 0) +
+          (atPoint ? 0 : OFF_POINT_COST);
         const state = known ? 1 : 0;
         if (!best[end][state] || cost < best[end][state].cost) best[end][state] = { cost, from: start, state: previousState };
       }
@@ -91,8 +123,16 @@ function segment(text, { points, vocabulary, maxLetters }) {
   const parts = [0, ...cuts].map((cut, i, all) => text.slice(cut, all[i + 1] ?? n));
   // Weak evidence (known words covering less than half the word) gives odd
   // splits; such words are better left whole.
-  const knownLetters = parts.filter((part) => isKnownPart(part.toLowerCase()))
-    .reduce((sum, part) => sum + part.length, 0);
+  const evidence = parts.map((part) => {
+    const lowerPart = part.toLowerCase();
+    return isKnownPart(lowerPart) || (linkingS && isLinkedDerivation(lowerPart));
+  });
+  const knownLetters = parts.reduce((sum, part, i) => {
+    const previous = parts[i - 1]?.toLowerCase();
+    const afterLink = linkingS && evidence[i - 1] && previous.endsWith('s') && previous.length > MIN_LINKED_HEAD &&
+      hyphenation.has(cuts[i - 1]) && part.length >= MIN_LINKED_HEAD;
+    return evidence[i] || afterLink ? sum + part.length : sum;
+  }, 0);
   return knownLetters * 2 >= n ? parts : [text];
 }
 
@@ -133,12 +173,15 @@ function group(parts, maxLetters) {
   return best.chunks.map((chunk) => chunk.map((i) => parts[i]).join(''));
 }
 
+const BREAKS = '-/';
+
 function splitCore(core, options) {
-  // Existing hyphens between letters (EU-landenes) are always boundaries.
+  // Hyphens and slashes inside the word are always boundaries: «EU-landenes»,
+  // «Maud»-ekspedisjonen, 1800-tallet, Skullerud/Mortensrud.
   const pieces = [];
   let start = 0;
   for (let i = 1; i < core.length - 1; i++) {
-    if (core[i] === '-' && isLetter(core[i - 1]) && isLetter(core[i + 1])) {
+    if (BREAKS.includes(core[i]) && !BREAKS.includes(core[i - 1]) && !BREAKS.includes(core[i + 1])) {
       pieces.push(core.slice(start, i + 1));
       start = i + 1;
     }
@@ -146,17 +189,24 @@ function splitCore(core, options) {
   pieces.push(core.slice(start));
 
   const parts = pieces.flatMap((piece) => {
-    if (letterCount(piece) <= options.maxLetters || !/^\p{L}+$/u.test(piece)) return [piece];
-    const segmented = segment(piece, options);
-    return segmented.flatMap((part) => (part.length > 2 * options.maxLetters ? forceSplit(part, options) : [part]));
+    // Only the letters are segmented; quotes and the like stay on the outer parts («Maud»-).
+    const match = /^(\P{L}*)(\p{L}+)(\P{L}*)$/u.exec(piece);
+    if (letterCount(piece) <= options.maxLetters || !match) return [piece];
+    const [, lead, letters, trail] = match;
+    const segmented = segment(letters, options)
+      .flatMap((part) => (part.length > 2 * options.maxLetters ? forceSplit(part, options) : [part]));
+    segmented[0] = lead + segmented[0];
+    segmented[segmented.length - 1] += trail;
+    return segmented;
   });
   return parts.length > 1 ? group(parts, options.maxLetters) : parts;
 }
 
 // Returns the display parts of a token: [token] when it is short enough or no
-// good split exists. Every part but the last ends with a hyphen; quotes and
-// punctuation stay on the first and last part.
-export function splitLongWord(token, { points, vocabulary, maxLetters = 13 }) {
+// good split exists. Every part but the last ends with a hyphen (or the slash
+// it was split at); quotes and punctuation stay on the first and last part.
+// `lang` is the book's language; the linking s rules are Norwegian.
+export function splitLongWord(token, { points, vocabulary, maxLetters = 13, lang = 'nb' }) {
   if (letterCount(token) <= maxLetters) return [token];
   const chars = Array.from(token);
   let start = 0;
@@ -166,11 +216,11 @@ export function splitLongWord(token, { points, vocabulary, maxLetters = 13 }) {
   const prefix = chars.slice(0, start).join('');
   const core = chars.slice(start, end).join('');
   const suffix = chars.slice(end).join('');
-  const parts = splitCore(core, { points, vocabulary, maxLetters });
+  const parts = splitCore(core, { points, vocabulary, maxLetters, linkingS: lang !== 'en' });
   if (parts.length === 1) return [token];
   return parts.map((part, i) => {
     const last = i === parts.length - 1;
-    const text = last || part.endsWith('-') ? part : `${part}-`;
+    const text = last || BREAKS.includes(part[part.length - 1]) ? part : `${part}-`;
     return (i === 0 ? prefix : '') + text + (last ? suffix : '');
   });
 }

@@ -77,7 +77,7 @@ export async function openReader(root, id) {
       const points = await loadHyphenator(book.lang);
       vocabulary ||= buildVocabulary(index.words);
       const maxLetters = settings.splitLength;
-      splitWord = (word) => splitLongWord(word, { points, vocabulary, maxLetters });
+      splitWord = (word) => splitLongWord(word, { points, vocabulary, maxLetters, lang: book.lang });
     } catch {
       splitWord = null;
     }

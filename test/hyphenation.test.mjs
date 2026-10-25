@@ -73,6 +73,36 @@ test('short, unknown and hyphenated words', async () => {
   assert.deepEqual(split('EU-landenes'), ['EU-landenes']);
 });
 
+test('hyphens after quotes and digits, and slashes, are split points', async () => {
+  const points = await loadHyphenator('nb');
+  const split = (word, words = []) =>
+    splitLongWord(word, { points, vocabulary: buildVocabulary(words), maxLetters: 13 });
+  // A bare ending is not a part: not «ekspedisjone-» «nes».
+  assert.deepEqual(split('«Norge»-ekspedisjonenes,', ['ekspedisjon', 'ekspedisjonene']),
+    ['«Norge»-', 'ekspedisjonenes,']);
+  assert.deepEqual(split('1800-tallsforfatterne', ['forfatter']), ['1800-talls-', 'forfatterne']);
+  assert.deepEqual(split('Skullerud/Mortensrud.'), ['Skullerud/', 'Mortensrud.']);
+  assert.deepEqual(split('taknemmelighet', ['taknemmelig']), ['taknemmelighet']);
+});
+
+test('a Norwegian linking s marks a compound boundary', async () => {
+  const points = await loadHyphenator('nb');
+  const split = (word, words = [], lang = 'nb') =>
+    splitLongWord(word, { points, vocabulary: buildVocabulary(words), maxLetters: 13, lang });
+  // A word-forming suffix with s: the first part needs no entry in the vocabulary.
+  assert.deepEqual(split('redningsaksjon', ['aksjon']), ['rednings-', 'aksjon']);
+  assert.deepEqual(split('konsentrasjonsleirer', ['leir']), ['konsentrasjons-', 'leirer']);
+  // A known word and s at a hyphenation point: the rest needs no entry either.
+  assert.deepEqual(split('statsstipendiat'), ['stats-', 'stipendiat']);
+  assert.deepEqual(split('idrettsbevegelsen'), ['idretts-', 'bevegelsen']);
+  // The patterns have no break in «fin-ger-spid», so the s is not taken as linking.
+  assert.deepEqual(split('fingerspidserne', ['finger']), ['fingerspidserne']);
+  // A suffix does not swallow a known part.
+  assert.deepEqual(split('polarforskningssenter', ['senter']), ['polar-', 'forsknings-', 'senter']);
+  // English has no linking s.
+  assert.deepEqual(split('redningsaksjon', ['aksjon'], 'en'), ['redningsaksjon']);
+});
+
 test('unspaced dashes between words separate them', () => {
   assert.deepEqual(tokenizeParagraph('dialogue—perhaps the best'), ['dialogue—', 'perhaps', 'the', 'best']);
   assert.deepEqual(tokenizeParagraph('Han kom – endelig.'), ['Han', 'kom –', 'endelig.']);
